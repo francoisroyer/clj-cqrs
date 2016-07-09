@@ -8,7 +8,9 @@ FIXME
 
 ## Deploy in a Wildfly cluster in Openshift
 
-rhc create-app $APPNAME wildlife --no-git
+rhc create-app $APPNAME wildfly --from-code $GIT_LOCATION
+
+rhc create-app $APPNAME wildfly --no-git
 
 ## License
 

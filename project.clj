@@ -42,6 +42,8 @@
   :plugins [[lein-immutant "2.1.0"]
             [lein-environ "1.0.1"]]
   :main clj-cqrs.core
+  :aot [clj-cqrs.core]
+  :source-paths ["src/clj"]
   ;:uberjar-name "demo-standalone.jar"
   :min-lein-version "2.4.0"
   ;:jvm-opts ["-Dhornetq.data.dir=target/hornetq-data"
