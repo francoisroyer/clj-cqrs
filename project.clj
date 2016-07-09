@@ -14,6 +14,7 @@
                  [prismatic/schema "1.0.3"]
                  [prismatic/plumbing "0.5.2"]
                  [org.clojure/data.fressian "0.2.1"]
+                 [environ "1.0.0"]
 
                  [org.immutant/immutant "2.1.4"]
                  [org.immutant/wildfly "2.1.4"]
@@ -21,9 +22,9 @@
                  ;[org.keycloak/keycloak-undertow-adapter "1.9.7.Final"]
 
                  ;VIEWS
-                 [org.apache.solr/solr-core "6.1.0" :exclusions [[com.fasterxml.jackson.core/jackson-core]
-                                                                 [com.fasterxml.jackson.dataformat/jackson-dataformat-smile]]]
-                 [org.apache.solr/solr-solrj "6.1.0"]
+                 ;[org.apache.solr/solr-core "6.1.0" :exclusions [[com.fasterxml.jackson.core/jackson-core]
+                 ;                                                [com.fasterxml.jackson.dataformat/jackson-dataformat-smile]]]
+                 ;[org.apache.solr/solr-solrj "6.1.0"]
 
                  ;API
                  [metosin/compojure-api "1.1.3" :exclusions [ring/ring-core]]
@@ -34,11 +35,19 @@
                  ;[cheshire "5.6.2"]
 
                  ;Database
-                 [com.layerware/hugsql "0.4.7"]
-                 [org.postgresql/postgresql "9.4.1207"]
-                 [com.h2database/h2 "1.4.192"]
+                 ;[com.layerware/hugsql "0.4.7"]
+                 ;[org.postgresql/postgresql "9.4.1207"]
+                 ;[com.h2database/h2 "1.4.192"]
                  ]
-  :profiles {:dev {:source-paths ["dev" "src/clj"]
+  :plugins [[lein-immutant "2.1.0"]
+            [lein-environ "1.0.1"]]
+  :main clj-cqrs.core
+  ;:uberjar-name "demo-standalone.jar"
+  :min-lein-version "2.4.0"
+  ;:jvm-opts ["-Dhornetq.data.dir=target/hornetq-data"
+  ;           "-Dcom.arjuna.ats.arjuna.objectstore.objectStoreDir=target/ObjectStore"]
+  :profiles {:uberjar {:aot [clj-cqrs.core]}
+             :dev {:source-paths ["dev" "src/clj"]
                    ;:java-source-paths ["src/java"]
                    :repl-options {:port 54806}
                    }}

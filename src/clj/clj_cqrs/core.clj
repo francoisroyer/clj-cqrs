@@ -13,8 +13,7 @@
   (:require
     [taoensso.timbre :refer [log trace debug info warn error]]
     [com.stuartsierra.component :as component :refer [using]]
-    [com.rpl.specter :refer :all]
-    [com.rpl.specter.macros :refer :all]
+    [clojure.java.io              :as io]
     [immutant.messaging :refer :all]
     [immutant.caching :as caching]
     [immutant.web :as web]
@@ -25,7 +24,9 @@
     [ring.util.http-response :refer :all]
     [clj-cqrs.api :refer :all]
     [clj-cqrs.domains :refer :all]
+    [environ.core       :refer (env)]
     )
+  (:gen-class)
   )
 ;(remove-ns 'clj-cqrs.api)
 
@@ -233,7 +234,13 @@
   component/Lifecycle
   (start [this]
     (info (str "Starting WebServer with options " options) )
-    (let [server (web/run (:handler api) :host "localhost" :port 8080 :path "/")]
+    (let [server (web/run (:handler api)
+                          :host "localhost"
+                          :port 8080 :path "/"
+                          ;(merge
+                          ;  {"host" (env :demo-web-host)
+                          ;   "port" (env :demo-web-port 8080)})
+                          )]
       (assoc this :server server) ))
   (stop [this]
     (info "Stopping WebServer")
@@ -303,3 +310,22 @@
 ;TODO IAM with Keycloak
 
 ;TODO deploy on wildfly/openshift/jenkins
+
+(defn -main [& args]
+  (start!))
+
+;(defn -main [& {:as args}]
+;  (web/run
+;    (-> routes
+;        (immutant.web.middleware/wrap-session
+;          {:timeout 20}))
+;    (merge
+;      {"host" (env :demo-web-host)
+;       "port" (env :demo-web-port 8080)
+;       "ssl-port" (env :ssl-port)
+;       "http2?" (env :http2?)
+;       :keystore (io/resource "server.keystore")
+;       :key-password "password"
+;       :truststore (io/resource "server.truststore")
+;       :trust-password "password"}
+;      args)))
