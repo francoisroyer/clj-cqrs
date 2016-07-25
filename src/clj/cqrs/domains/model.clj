@@ -1,4 +1,4 @@
-(ns clj-cqrs.domains.model
+(ns cqrs.domains.model
   (:require
     [taoensso.timbre :refer [log trace debug info warn error]]
     [schema.core :as s]
@@ -6,10 +6,10 @@
     [ring.swagger.upload :as upload]
     [clj-time.coerce :as c]
     [clj-time.core :as t]
-    [clj-cqrs.domains :refer :all]
+    [cqrs.core.commands :refer :all]
     )
   (:import
-    [clj_cqrs.domains CommandAccepted])
+    [cqrs.core.commands CommandAccepted])
   )
 
 
@@ -23,10 +23,16 @@
                               id
                               owner
                               name
-                              created-at])
+                              created-at]
+  IEvent
+  (apply-event [event state]
+    (update-in state [:models] assoc (:id event) (dissoc event :aggid)))
+  ;IElasticEventStore
+  ;(persist-event [event state]
+  ;  (update-in state [:models] assoc (:id event) (dissoc event :aggid)))
 
-(defmethod apply-event ModelCreatedEvent [state event]
-  (update-in state [:models] assoc (:id event) (dissoc event :aggid)))
+  )
+
 
 (s/defrecord CreateModelCommand [owner :- s/Num
                                  name :- s/Str]
@@ -55,6 +61,11 @@
                  :summary "Creates a new model"
                  (accept-command cmdqueue (map->CreateModelCommand cmd) )
                  )
+           ;(GET "/models" []
+           ;     :query-params [name :- s/Str]
+           ;     :return [sch/Model]
+           ;     :summary "List or find models"
+           ;     (handle-resource db :model))
            ;(GET "/models/:id" []
            ;     :path-params [id :- s/Str]
            ;     :return sch/Model

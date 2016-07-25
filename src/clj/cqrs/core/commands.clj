@@ -1,4 +1,4 @@
-(ns clj-cqrs.domains
+(ns cqrs.core.commands
   (:require
     [taoensso.timbre :refer [log trace debug info warn error]]
     [immutant.messaging :refer [publish]]
@@ -7,7 +7,11 @@
   (:gen-class)
   )
 
-(defmulti apply-event (fn [state event] (keyword (.getSimpleName (type event))) ))
+;(defmulti apply-event (fn [state event] (keyword (.getSimpleName (type event))) ))
+
+(defprotocol IEvent
+  (apply-event [event state])
+  )
 
 (s/defrecord CommandAccepted [id :- s/Num
                               message :- s/Str

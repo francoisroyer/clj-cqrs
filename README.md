@@ -4,13 +4,43 @@ A Clojure library implementing CQRS and event-sourcing using Immutant components
 
 ## Usage
 
-FIXME
+TODO show how to to use as a template
 
 ## Deploy in a Wildfly cluster in Openshift
 
 rhc create-app $APPNAME wildfly --from-code $GIT_LOCATION
 
-rhc create-app $APPNAME wildfly --no-git
+rhc create-app wf wildfly --no-git
+
+lein do clean, immutant
+
+cp .war to ROOT.war then scp to deployments + add ROOT.war.dodeploy
+/var/lib/openshift/{APP_ID}/app-root/runtime/dependencies/jbossews/webapps
+/var/lib/openshift/5781680e2d52716c2100006a
+
+scp <your local file name> <your hash number>@<your app name>-<your domain name>.rhcloud.com:~/<app name>/data/
+
+scp target/clj-cqrs.war 5781680e2d52716c2100006a@wf-datasio.rhcloud.com:~/app-deployments/2016-07-09_17-09-43.431/repo/deployments/
+
+cp app-deployments/2016-07-09_17-09-43.431/repo/deployments/clj-cqrs.* wildfly/standalone/deployments/
+
+visit http://wf-datasio.rhcloud.com/clj-cqrs/api-docs/index.html
+
+http://dmitrygusev.blogspot.fr/2013/06/deploy-application-binaries-war-to.html
+http://jagadesh4java.blogspot.fr/2014/04/deploy-custom-application-into-openshift.html
+
+TODO cmd line with set of questions to build commands + memoize
+
+
+APP Assisted learning -> document import/upload + BPM/workflow + screens to advance state
+
+Index -> category trees, documents
+Connectors + extractor for entities etc...
+Datasets - url
+Workflows - BPM spec?
+Workbooks/Cases/study/investigation
+Dataflow - realtime (push or pull) or batch queries
+
 
 ## License
 

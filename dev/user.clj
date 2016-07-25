@@ -1,15 +1,15 @@
 (ns user
- (:require [com.stuartsierra.component :as component]
+ (:require [cqrs.system :as cqrs]
            [clojure.tools.namespace.repl :refer (refresh)]
            [clojure.repl :refer [pst]]
            [clojure.pprint :refer [pprint]])
- ;(:use ns-tracker.core)
+ (:use ns-tracker.core)
  )
 
 ;TODO insert commands via REPL?
 
-;(def modified-namespaces
-; (ns-tracker ["dev" "src" "checkouts" "test"]))
+(def modified-namespaces
+  (ns-tracker ["dev" "src" "checkouts" "test"]))
 ;
 ;(defonce freshstart true)
 ;
@@ -41,12 +41,22 @@
 ; (start)
 ; )
 ;
-;(defn reload []
-; (stop)
-; (doseq [ns-sym (modified-namespaces)]
-;  (log/info (str "Reloading " ns-sym))
-;  (if (seq? ns-sym)
-;   (require (last ns-sym) :reload)
-;   (require ns-sym :reload))
-;  )
-; (restart!))
+
+(defn start []
+  (cqrs/start!))
+
+(defn stop []
+  (cqrs/stop!))
+
+(defn reload []
+ (stop)
+ (doseq [ns-sym (modified-namespaces)]
+  (println (str "Reloading " ns-sym))
+  (if (seq? ns-sym)
+   (require (last ns-sym) :reload)
+   (require ns-sym :reload))
+  )
+  (start))
+
+(defn test-cmd []
+  (cqrs/run-command! (cqrs/map->TestCommand {:message "ok"}) ))

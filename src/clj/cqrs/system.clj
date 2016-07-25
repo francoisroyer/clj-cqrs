@@ -1,8 +1,7 @@
-(ns clj-cqrs.core
+(ns cqrs.system
   "
   DESCRIPTION
   REST/CQRS api.
-  Embeds a datomic instance in dev mode.
   Use Event-sourcing to maintain state.
   TODO deployable as Immutant app or stand-alone?
 
@@ -22,8 +21,9 @@
     [clj-time.core :as t]
     [hashids.core :as h]
     [ring.util.http-response :refer :all]
-    [clj-cqrs.api :refer :all]
-    [clj-cqrs.domains :refer :all]
+    [cqrs.core.api :refer :all]
+    [cqrs.core.commands :refer :all]
+    [cqrs.stores.elasticsearch :refer [build-indexstore index-event]]
     [environ.core       :refer (env)]
     )
   (:gen-class)
@@ -70,10 +70,10 @@
   component/Lifecycle
   (start [this]
     (info (str "Starting EventStore component with options " options))
-    (assoc this :event-store (atom {})))
+    (assoc this :store (atom {})))
   (stop [this]
     (info "Stopping EventStore")
-    (dissoc this :event-store))
+    (dissoc this :store))
   )
 
 (defn build-eventstore [config]
@@ -103,17 +103,17 @@
   "Insert events in event-store and publish them via event-queue"
   [event-repository aggid events]
   ;Save events
-  (swap! (get-in event-repository [:event-store :event-store])
+  (swap! (get-in event-repository [:event-store :store])
          update-in [aggid] concat events)
   ;Publish events
-  ;(doseq [event events]
-  ;(publish (-> event-repository :event-queue :queue) event :encoding :fressian))
+  (doseq [event events]
+    (publish (-> event-repository :event-queue :queue) event :encoding :fressian))
   )
 
 (defn load-events
   "Load events from event repository for given aggregate, since given version"
   [event-repo aggid version]
-  (filter #(>= version (:version %)) (get @(get-in event-repo [:event-store :event-store]) aggid))
+  (filter #(>= version (:version %)) (get @(get-in event-repo [:event-store :store]) aggid))
   )
 
 (defn build-eventrepo [config]
@@ -126,11 +126,13 @@
 ;================================================================================
 
 (defrecord TestEvent [aggid version
-                      id created-at message])
+                      id created-at message]
+  IEvent
+  (apply-event [event state]
+    (assoc state :state :tested
+                 :last-tested-at (:created-at event)))
+  )
 
-(defmethod apply-event :TestEvent [state event]
-  (assoc state :state :tested
-               :last-tested-at (:created-at event)))
 
 (s/defrecord TestCommand [message]
              ICommand
@@ -144,13 +146,27 @@
                         (println "TestCommand executed.")
                         [(->TestEvent aggid new-version id created-at message)]) ))
 
+;define Command
+;(defmacro defcommand)
+
+;(defdomain "model"
+; TestCommand)
+
+;(defcommand TestCommand
+; :agg-id (fn [cmd] :test)
+; :perform (fn [command state aggid version] )
+; :context "/api/v1"
+; :tags ["Models"]
+; :route "/test"
+; :summary "Run a test")
+;)
 
 ;================================================================================
 ; EVENT AGGREGATES
 ;================================================================================
 
 (defn apply-events [state events]
-  (reduce apply-event state events))
+  (reduce #(apply-event %2 %1) state events))
 
 (defrecord CommandHandler [options command-queue event-repository]  ;state-cache for Aggregate objects?
   component/Lifecycle
@@ -188,14 +204,14 @@
 
 
 ;================================================================================
-; Event publishing
+; Event pub/sub
 ;================================================================================
 
 (defrecord EventQueue [options]
   component/Lifecycle
   (start [this]
     (info (str "Starting EventQueue component with options " options) )
-    (assoc this :queue (queue "events"))
+    (assoc this :queue (topic "events"))
     )
   (stop [this]
     (info "Stopping EventQueue")
@@ -206,25 +222,24 @@
 
 
 
-;Updates world state with event
-(defn update-views! [state-store event])
-
-(defrecord EventHandler [options event-queue state-store]
+(defrecord StatsService [options event-queue index-store]
   component/Lifecycle
   (start [this]
-    (let [update (fn [event] (update-views! state-store event) )
-          handler (listen (:queue event-queue) update)]
-      (info (str "Starting EventHandler component with options " options) )
+    (let [update (fn [event] (index-event index-store event) )]
+      (subscribe (:queue event-queue) "stats-service" update)
+      (info (str "Starting Stats Service component with options " options) )
       (assoc this
-        :handler handler)))
+        :subscription "stats-service")))
   (stop [this]
-    (info "Stopping EventHandler")
-    (.close (:handler this))
+    (info "Stopping Stats Service")
+    (unsubscribe (:subscription this))
     (dissoc this :handler)))
 
-(defn build-eventhandler [config]
-  (map->EventHandler {:options config}))
+(defn build-stats-service [config]
+  (map->StatsService {:options config}))
 
+;TODO RemoteHttpService or WebHookService
+;TODO remote webhook or microservice - Push Avro or JSON via POST to a given URL
 
 ;================================================================================
 ; CQRS SYSTEM
@@ -250,23 +265,29 @@
   (map->WebServer {:options config}))
 
 
-(defn make-system [config]
+(defn make-app-system [config]
   (let [{:keys [host port]} config]
     (component/system-map
       :command-queue (build-commandqueue config )
       :event-repository (using (build-eventrepo config) [:event-store :event-queue])
       :command-handler (using (build-commandhandler config) [:event-repository :command-queue] )
-      ;:state-cache ;use immutant.cache
+      ;:agg-store ;use immutant.cache
       :event-store (build-eventstore config)
       :event-queue (build-eventqueue config)
-      :event-handler (using (build-eventhandler config) {:event-queue :event-queue} )
-      ;:records-staging ;S3? For raw records
+      ;:records-staging ;S3? For raw dataset records
       ;:records-queue ;AWS SQS? For coerced records, i.e. InsertRecord{:type ... :fields ...}
       ;:records-handlers ;
-      ;:records-store ;handle insertion of records given their types
+      ;handle insert/serving of records given their types - ex: Solr or Elasticsearch
+      :index-store (using (build-indexstore config) [:event-queue])
+      ;Subscribe each event-service to events, insert as stream or batch if restart
+      :stats-service (using (build-stats-service config) [:event-queue :index-store] )
       :api (using (build-api (:api config)) [:command-queue] )
       :web-server (using (build-webserver config) [:api])
       )))
+
+(defn make-service-system
+  "Remote services system - ES, SOLR, Ingest/ETL (Kafka/Samsara), stream/batch, data staging/repositories"
+  [config] )
 
 ;:job-server ;stream/batch, onyx?
 ;:collectors ;riemann?
@@ -275,12 +296,12 @@
 
 ;Riemann for metrics/logs
 
-(def system (make-system {:http {:host "localhost"
+(def system (make-app-system {:http {:host "localhost"
                                  :port 9999}
-                          :api {}
-                          :datalog {:engine :graphlite-local}
-                          :database {:engine :atom}
-                          }))
+                              :elasticsearch {:local true
+                                              :path "http://localhost:9200"}
+                              :api {}
+                              }))
 
 (defn start! []
   (try (alter-var-root #'system component/start)
@@ -292,7 +313,7 @@
                   (fn [s] (when s (component/stop s)))))
 
 ;define user/project *context* for command
-(defn run-command! [system cmd]
+(defn run-command! [cmd]
   ;Call accept-command from API routes
   ;Store result of last command in *result*
   (accept-command (-> system :command-queue :queue) cmd )
@@ -300,7 +321,7 @@
 
 ;(start!)
 ;(stop!)
-;(run-command! system (map->TestCommand {:message "ok"}) )
+;(run-command! (map->TestCommand {:message "ok"}) )
 
 (defn run-query [system q])
 
@@ -310,6 +331,8 @@
 ;TODO IAM with Keycloak
 
 ;TODO deploy on wildfly/openshift/jenkins
+
+;TODO store/send events as Avro?
 
 (defn -main [& args]
   (start!))

@@ -12,3 +12,6 @@ pom.xml.asc
 hornetq-data/
 .idea/
 *.iml
+/data
+/resources/public
+*.log
