@@ -1,4 +1,4 @@
-(ns cqrs.stores.elasticsearch
+(ns cqrs.engines.elasticsearch
   "Elasticsearch store component
   Implements EventService - bulk load when reseeding, query etc...
   Calls IRecord functions from events retrieved from event queue
@@ -14,7 +14,7 @@
   (:import org.elasticsearch.node.NodeBuilder)
   )
 
-(defrecord ElasticsearchIndexStore [options event-queue]
+(defrecord ElasticsearchIndexEngine [options event-queue]
   component/Lifecycle
   (start [this]
     (info (str "Starting ElasticsearchIndexStore with options " options) )
@@ -36,8 +36,8 @@
       this))
   )
 
-(defn build-indexstore [config]
-  (map->ElasticsearchIndexStore {:options (:elasticsearch config) })
+(defn build-index-engine [config]
+  (map->ElasticsearchIndexEngine {:options (:elasticsearch config) })
   )
 
 

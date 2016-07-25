@@ -23,7 +23,8 @@
     [ring.util.http-response :refer :all]
     [cqrs.core.api :refer :all]
     [cqrs.core.commands :refer :all]
-    [cqrs.stores.elasticsearch :refer [build-indexstore index-event]]
+    [cqrs.engines.elasticsearch :refer [build-index-engine]]
+    [cqrs.services.stats :refer [build-stats-service]]
     [environ.core       :refer (env)]
     )
   (:gen-class)
@@ -89,25 +90,25 @@
 ;Create fixtures?
 ;sync / update method: At start-up, asks state-cache version-id - if behind, will replay events
 ;add a synchronous update! method?
-(defrecord EventRepository [options event-store event-queue state-cache]
+(defrecord EventRepository [options event-store event-topic state-cache]
   component/Lifecycle
   (start [this]
     (info (str "Starting EventRepository component with options " options) )
     (assoc this :event-store event-store
-                :event-queue event-queue))
+                :event-topic event-topic))
   (stop [this]
     (info "Stopping EventRepository")
     this))
 
 (defn insert-events
-  "Insert events in event-store and publish them via event-queue"
+  "Insert events in event-store and publish them via event-topic"
   [event-repository aggid events]
   ;Save events
   (swap! (get-in event-repository [:event-store :store])
          update-in [aggid] concat events)
   ;Publish events
   (doseq [event events]
-    (publish (-> event-repository :event-queue :queue) event :encoding :fressian))
+    (publish (-> event-repository :event-topic :topic) event :encoding :fressian))
   )
 
 (defn load-events
@@ -207,39 +208,20 @@
 ; Event pub/sub
 ;================================================================================
 
-(defrecord EventQueue [options]
+(defrecord EventTopic [options]
   component/Lifecycle
   (start [this]
-    (info (str "Starting EventQueue component with options " options) )
-    (assoc this :queue (topic "events"))
+    (info (str "Starting EventTopic component with options " options) )
+    (assoc this :topic (topic "events"))
     )
   (stop [this]
-    (info "Stopping EventQueue")
+    (info "Stopping EventTopic")
+    (stop (:topic this))
     this))
 
-(defn build-eventqueue [config]
-  (map->EventQueue {:options config}))
+(defn build-eventtopic [config]
+  (map->EventTopic {:options config}))
 
-
-
-(defrecord StatsService [options event-queue index-store]
-  component/Lifecycle
-  (start [this]
-    (let [update (fn [event] (index-event index-store event) )]
-      (subscribe (:queue event-queue) "stats-service" update)
-      (info (str "Starting Stats Service component with options " options) )
-      (assoc this
-        :subscription "stats-service")))
-  (stop [this]
-    (info "Stopping Stats Service")
-    (unsubscribe (:subscription this))
-    (dissoc this :handler)))
-
-(defn build-stats-service [config]
-  (map->StatsService {:options config}))
-
-;TODO RemoteHttpService or WebHookService
-;TODO remote webhook or microservice - Push Avro or JSON via POST to a given URL
 
 ;================================================================================
 ; CQRS SYSTEM
@@ -269,18 +251,18 @@
   (let [{:keys [host port]} config]
     (component/system-map
       :command-queue (build-commandqueue config )
-      :event-repository (using (build-eventrepo config) [:event-store :event-queue])
+      :event-repository (using (build-eventrepo config) [:event-store :event-topic])
       :command-handler (using (build-commandhandler config) [:event-repository :command-queue] )
       ;:agg-store ;use immutant.cache
       :event-store (build-eventstore config)
-      :event-queue (build-eventqueue config)
-      ;:records-staging ;S3? For raw dataset records
-      ;:records-queue ;AWS SQS? For coerced records, i.e. InsertRecord{:type ... :fields ...}
-      ;:records-handlers ;
+      :event-topic (build-eventtopic config)
+      ;:resource-staging ;S3? For datasets or documents
+      ;:record-topic ;AWS SQS? For coerced records, i.e. InsertRecord{:type ... :fields ...}
+      ;Object-topic ;send Objects?
       ;handle insert/serving of records given their types - ex: Solr or Elasticsearch
-      :index-store (using (build-indexstore config) [:event-queue])
+      :index-engine (using (build-index-engine config) [:event-topic])
       ;Subscribe each event-service to events, insert as stream or batch if restart
-      :stats-service (using (build-stats-service config) [:event-queue :index-store] )
+      :stats-service (using (build-stats-service config) [:event-topic :index-engine] )
       :api (using (build-api (:api config)) [:command-queue] )
       :web-server (using (build-webserver config) [:api])
       )))
@@ -297,7 +279,7 @@
 ;Riemann for metrics/logs
 
 (def system (make-app-system {:http {:host "localhost"
-                                 :port 9999}
+                                     :port 9999}
                               :elasticsearch {:local true
                                               :path "http://localhost:9200"}
                               :api {}

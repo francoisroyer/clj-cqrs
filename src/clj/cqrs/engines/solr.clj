@@ -1,4 +1,4 @@
-(ns cqrs.stores.solr
+(ns cqrs.engines.solr
   (import [org.apache.solr.client.solrj SolrResponse]
           [org.apache.solr.common.util NamedList SimpleOrderedMap]
           [org.apache.solr.common SolrDocumentList SolrDocument]
@@ -14,6 +14,9 @@
           [org.apache.solr.common.params MultiMapSolrParams]
           [org.apache.solr.client.solrj.request QueryRequest]
           [org.apache.solr.client.solrj SolrRequest$METHOD]))
+
+
+;TODO time series engine with chronix?
 
 ;================================================================================
 ; Embedded Solr server
