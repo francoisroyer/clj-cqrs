@@ -23,6 +23,7 @@
     [immutant.messaging :refer [publish]]
     [immutant.codecs :refer [make-codec register-codec]]
     [immutant.codecs.fressian :refer [register-fressian-codec]]
+    [cqrs.core.commands :refer :all]
     [cqrs.domains.model :refer [model-routes]]
     )
   (:gen-class)
@@ -61,18 +62,6 @@
 ;Document/Record
 
 ;Datasource
-
-(defn api-routes [cmdqueue db]
-   (api
-     {:swagger
-      {:ui   "/api-docs"
-       :spec "/swagger.json"
-       :data {:info {:title       "Sample API"
-                     :description "Compojure Api example"}
-              :tags [{:name "api", :description "some apis"}]}}}
-     (model-routes cmdqueue db)
-     ))
-
 
 ;================================================================================
 ; SPA UI
@@ -123,10 +112,12 @@
            {:label "Dashboards" :icon "fa fa-dashboard" :href "#"} ;stats
            ])
 
+
 (deftemplate basetpl
             "META-INF/resources/webjars/adminlte/2.3.3/index2.html"
              []
-             ;[:head] ;(content
+             [:head] (append (include-css "css/app.css"))
+             ;(content
                        ;(include-encoding-metas)
                        ;(html [:meta {:content "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" :name "viewport"}])
                        ;(html [:title  "CQRS" ])
@@ -179,11 +170,25 @@
 
 ;TODO any call fo /app/* should be routed to webjar /adminlte
 
-(defrecord ApiComponent [options command-queue state-cache]
+
+(defn api-routes [cmd-queue cmd-handler]
+  (api
+    {:swagger
+     {:ui   "/api-docs"
+      :spec "/swagger.json"
+      :data {:info {:title       "Sample API"
+                    :description "Compojure Api example"}
+             :tags [{:name "api", :description "some apis"}]}}}
+    (model-routes cmd-queue)
+    (commands-routes cmd-handler)
+    ))
+
+
+(defrecord ApiComponent [options command-queue command-handler]
   component/Lifecycle
   (start [this]
     (info (str "Starting API with options " options))
-    (let [app (routes (api-routes command-queue nil)
+    (let [app (routes (api-routes command-queue command-handler)
                       ui-routes)
           ]
       (assoc this :handler (:handler app) )))

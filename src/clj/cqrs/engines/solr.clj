@@ -1,4 +1,8 @@
 (ns cqrs.engines.solr
+  "
+  REFERENCES
+  https://cwiki.apache.org/confluence/display/solr/Other+Parsers
+  "
   (import [org.apache.solr.client.solrj SolrResponse]
           [org.apache.solr.common.util NamedList SimpleOrderedMap]
           [org.apache.solr.common SolrDocumentList SolrDocument]

@@ -10,7 +10,8 @@
     [cqrs.core.commands :refer :all]
     )
   (:import
-    [cqrs.core.commands CommandAccepted])
+    [cqrs.core.commands CommandAccepted]
+    [cqrs.core.events IEvent])
   )
 
 

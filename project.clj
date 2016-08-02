@@ -4,6 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
+                 [org.clojure/core.async "0.2.385"]
                  [com.taoensso/timbre "4.1.4"]
                  [org.clojure/core.match "0.3.0-alpha4"]
                  [com.stuartsierra/component "0.3.1"]
@@ -16,13 +17,14 @@
                  [org.clojure/data.fressian "0.2.1"]
                  [environ "1.0.0"]
 
+                 ;[amazonica "0.3.73"]
                  [org.immutant/immutant "2.1.5"]
                  [org.immutant/wildfly "2.1.5"]
                  ;[io.undertow/undertow-core "1.3.15.Final"] ;TODO fix dep on Jackson
                  ;[org.keycloak/keycloak-undertow-adapter "1.9.7.Final"]
 
                  ;API
-                 [metosin/compojure-api "1.1.3" :exclusions [ring/ring-core]]
+                 [metosin/compojure-api "1.1.5" :exclusions [ring/ring-core]]
                  [ring/ring-core "1.5.0"]
                  [org.webjars/webjars-locator "0.27"]
                  [buddy/buddy-auth "1.1.0"]
@@ -40,9 +42,11 @@
                  ;Front-end
                  [org.clojure/clojurescript "1.8.51"]
                  [enlive "1.1.6"]
-                 [com.taoensso/sente "1.9.0"]
+                 [com.taoensso/sente "1.10.0"]
                  [datascript "0.15.2"]
-                 [reagent "0.5.1"]
+                 ;[reagent "0.5.1"]
+                 [reagent "0.6.0-rc" :exclusions [cljsjs/react]]
+                 [cljsjs/react-with-addons "15.1.0-0"]
                  [re-frame "0.7.0"]
                  ;[sablono "0.7.2"]
                  [kioo "0.5.0-SNAPSHOT"]
@@ -51,6 +55,7 @@
                  [cljsjs/pdfjs "1.5.188-0"]
                  [cljsjs/vis "4.16.1-0"]
                  [cljsjs/leaflet "0.7.7-4"]
+                 [cljsjs/react-grid-layout "0.12.7-0"]
                  ;[cljsjs/codemirror "5.11.0-2"]
                  ]
   :source-paths ["src/clj" "src/cljs"]
@@ -78,6 +83,7 @@
                                   ;[org.elasticsearch/elasticsearch "2.3.3"]
                                   [org.elasticsearch/elasticsearch "1.7.3"]
                                   [clojurewerkz/elastisch "2.2.2"]
+                                  [org.onyxplatform/onyx "0.9.9"]
                                   ]
                    ;:java-source-paths ["src/java"]
                    :repl-options {:port 54806}
@@ -101,4 +107,13 @@
                                     :optimizations :advanced
                                     :pretty-print  true}}
                        ]}
+  :aliases {"node1"
+            ["immutant" "run" "--clustered"
+             "-Djboss.node.name=node1"
+             "-Djboss.server.data.dir=/tmp/node1"]
+            "node2"
+            ["immutant" "run" "--clustered"
+             "-Djboss.node.name=node2"
+             "-Djboss.server.data.dir=/tmp/two"
+             "-Djboss.socket.binding.port-offset=100"]}
   )

@@ -9,7 +9,8 @@
     [cqrs.core.commands :refer :all]
     )
   (:import
-    [cqrs.core.commands CommandAccepted])
+    [cqrs.core.commands CommandAccepted]
+    [cqrs.core.events IEvent])
   )
 
 
@@ -27,9 +28,6 @@
   IEvent
   (apply-event [event state]
     (update-in state [:models] assoc (:id event) (dissoc event :aggid)))
-  ;IElasticEventStore
-  ;(persist-event [event state]
-  ;  (update-in state [:models] assoc (:id event) (dissoc event :aggid)))
 
   )
 
@@ -52,7 +50,7 @@
 ;TODO how to save model events into view stores
 ;Create/Update/Delete
 
-(defn model-routes [cmdqueue db]
+(defn model-routes [cmdqueue]
   (context "/api" []
            :tags ["Models"]
            (POST "/models/CreateModel" []

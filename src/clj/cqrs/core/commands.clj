@@ -1,32 +1,227 @@
 (ns cqrs.core.commands
   (:require
     [taoensso.timbre :refer [log trace debug info warn error]]
-    [immutant.messaging :refer [publish]]
+    [com.stuartsierra.component :as component :refer [using]]
+    [immutant.messaging :refer [publish queue listen]]
+    [immutant.caching :as caching]
+    [immutant.web.async :as async]
+    [immutant.daemons :refer [singleton-daemon]]
     [schema.core :as s]
+    [compojure.api.sweet :refer :all]
+    [ring.util.http-response :refer :all]
+    ;[taoensso.sente :as sente]
+    ;[taoensso.sente.server-adapters.immutant      :refer (get-sch-adapter)]
+    [clojure.core.async :refer [go-loop <! >!]]
+    [cqrs.core.events :refer :all]
     )
   (:gen-class)
   )
 
-;(defmulti apply-event (fn [state event] (keyword (.getSimpleName (type event))) ))
-
-(defprotocol IEvent
-  (apply-event [event state])
-  )
 
 (s/defrecord CommandAccepted [id :- s/Num
                               message :- s/Str
                               _links :- {:status s/Str} ])
 
 (defprotocol ICommand
-  (get-aggregate-id [this])
+  (get-aggregate-id [this]) ;used to dispatch on command topic and retrieve aggregate from repo
   (perform [command state aggid version]))
 
 (defn sch [r] (last (last (schema.utils/class-schema r))))
 
+;Call get-agg-id to route to correct topic to ensure routing to single daemon handler
 (defn accept-command [q cmd]
   (let [uuid (str (java.util.UUID/randomUUID))]
     (publish q (assoc cmd :uuid uuid) :encoding :fressian)
     ;Return error 503 if queue unavailable
-    {:id uuid :message "Command accepted" :_links {:status (str "/command/" uuid "/status")}}
+    (accepted {:id uuid :message "Command accepted" :_links {:status (str "/command/" uuid)}})
     ))
 
+;(go-loop []
+;         (when-let [msg (<! websocket-chan)]
+;           (>! message-queue-chan msg)
+;           (recur)))
+
+
+(defrecord CommandQueue [options]
+  component/Lifecycle
+  (start [this]
+    (info (str "Starting CommandQueue component with options " options) )
+    (assoc this :queue (queue "cqrs-commands"))
+    )
+  (stop [this]
+    (info "Stopping CommandQueue")
+    this))
+
+(defn build-commandqueue [config]
+  (map->CommandQueue {:options config}))
+
+
+(defrecord AggregateRepository []
+  component/Lifecycle
+  (start [this]
+    (let [cache (immutant.caching/cache "aggregates")]
+      {:cache cache}))
+  (stop [this]
+    (immutant.caching/stop (:cache this))
+    (dissoc this :cache)
+    )
+  )
+
+(defn apply-events [state events]
+  (reduce #(apply-event %2 %1) state events))
+
+
+
+;TODO Should be a Singleton/daemon subscribing to a Command topic - i.e. call Cmd get-agg-id before inserting in topic
+;TODO hash based routing on agg id - start up to N command handlers
+;TODO encapsulate agg cache in aggregate-repository
+
+(defrecord CommandHandler [options command-queue event-repository]  ;state-cache for Aggregate objects?
+  component/Lifecycle
+  (start [this]
+    (info (str "Starting CommandHandler component with options " options) )
+    (let [aggregates (immutant.caching/cache "aggregates")
+          status (immutant.caching/cache "command-status" :ttl [1 :minute])
+          ;daemons (atom {}) ;sharded command handler daemons
+          handle-command (fn [cmd]
+                           (let [aggid (get-aggregate-id cmd)
+                                 agg (get aggregates aggid)
+                                 version (:_version agg)
+                                 old-events (load-events event-repository aggid version)
+                                 current-state (apply-events agg old-events)
+                                 _ (println current-state)
+                                 events (perform cmd current-state aggid version) ;catch here exceptions - handle sync/async cases
+                                 ]
+                             ;Save new aggregate state
+                             (try (.put aggregates aggid (assoc current-state :_version (inc version)))
+                                  (catch Exception e (println "WARNING - Aggregate cache unavailable")))
+                             ;publish events to command status cache (expiry of 1 minute)
+                             (try (.put status (:uuid cmd) {:uuid (:uuid cmd)
+                                                            :command (.getSimpleName (type cmd))
+                                                            :status "PROCESSED"
+                                                            :events events
+                                                            })
+                                  (catch Exception e (println "WARNING - Command status cache unavailable")))
+                             ;TODO add aggid / version here if success - when events exist
+                             (insert-events event-repository aggid events) ))
+          handler (listen (:queue command-queue) handle-command)
+          ;Start N daemons to shard command topic handling
+          daemon (singleton-daemon "command-handler" (fn [] (println "daemon started") ) (fn [] (println "daemon stopped") ))
+          ]
+      (.put aggregates :test {:_version 0})
+      (assoc this :handler handler
+                  :daemon daemon
+                  :status status
+                  :aggregates aggregates)))
+  (stop [this]
+    (info "Stopping CommandHandler")
+    (.close (:handler this))
+    (.stop (:daemon this))
+    (immutant.caching/stop (:aggregates this))
+    (immutant.caching/stop (:status this))
+    (dissoc this :handler :cache :daemon) ))
+
+(defn build-commandhandler [config]
+  (map->CommandHandler {:options config}))
+
+
+;daemon functions
+;(defonce listener (atom nil))
+;(defn start-listener []
+;  (swap! listener (fn [listener] (listen "my-queue" handle-msg) )))
+;(defn stop-listener []
+;    (swap! listener (fn [listener] (when listener (unlisten listener) ))))
+
+
+;================================================================================
+; COMMAND CHANNEL/WEBSOCKET
+;================================================================================
+
+;TODO when client connected, open a subscription to new topic?
+;clojure.lang.ExceptionInfo: Insufficient com.taoensso/encore version.
+; You may have a Leiningen dependency conflict (see http://goo.gl/qBbLvC for solution).
+; {:min-version "2.67.1", :your-version "2.18.0"}, compiling:(taoensso/sente.cljc:85:1)
+
+;(let [{:keys [ch-recv send-fn connected-uids
+;              ajax-post-fn ajax-get-or-ws-handshake-fn]}
+;      (sente/make-channel-socket! (get-sch-adapter) {})]
+;
+;  (def ring-ajax-post                ajax-post-fn)
+;  (def ring-ajax-get-or-ws-handshake ajax-get-or-ws-handshake-fn)
+;  (def ch-chsk                       ch-recv) ; ChannelSocket's receive channel
+;  (def chsk-send!                    send-fn) ; ChannelSocket's send API fn
+;  (def connected-uids                connected-uids) ; Watchable, read-only atom
+;  )
+
+;Return Command status and generated events for this user only
+
+(s/defschema CommandStatus {:uuid s/Str
+                            :command s/Str
+                            :status s/Str
+                            :events [{s/Keyword s/Any}]
+                            })
+
+(defn get-command-status [cmd-handler id]
+  (if-let [status (get (:status cmd-handler) id)]
+    (ok status)
+    (gone {:error "Command status not available or expired."})
+    )
+  )
+
+;on handshake - have a command-status-handler started in CommandHandler,
+;should register channel with user id, get all command-status for this user
+
+(defn commands-routes [command-handler]
+  (context "/api" []
+           :tags ["Commands"]
+           (GET "/commands/:id" []
+                :path-params [id :- s/Str]
+                :responses {200 {:schema CommandStatus :description "Command status and generated events."}
+                            410 {:schema {:error s/Str} :description "Command status not available or expired."}}
+                :summary "Returns command status"
+                (get-command-status command-handler id)
+                )
+           ;(GET  "/commands" req (ring-ajax-get-or-ws-handshake req))
+           ;(POST "/commands" req (ring-ajax-post                req))
+           ))
+
+
+;connect! -> should start async thread on request/respond deref
+;Or should subscribe in pubsub to Event Topic, and filter all events on :uuid
+
+;(defn ws-handler [request]
+;  (async/as-channel
+;    request
+;    {:on-open connect!
+;     :on-close disconnect!
+;     :on-message handle-message!})
+; )
+
+
+
+
+
+;define Command
+;(defmacro defcommand)
+
+;(defdomain "model"
+; TestCommand)
+
+;(defevent TestCreated) ;should call defrecord and create dummy constructor
+
+;(defmacro defevent
+;  [name args & [comment]]
+;  (let [tname (symbol (s/capitalize (str name)))]
+;    `(do
+;       (deftype ~tname ~args)
+;       (defn ~name ~(str comment) ~args (new ~tname ~@args)))))
+
+
+;(defcommand RequestTest [message :- s/String]
+; :agg-id (fn [cmd] :test)
+; :perform (fn [command state aggid version] [(->TestCreated)])
+; :context "/api/v1"
+; :tags ["Tests"]
+; :route "/test/create"
+; :summary "Run a test")
+;)

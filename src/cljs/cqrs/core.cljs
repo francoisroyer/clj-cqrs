@@ -9,7 +9,9 @@
             [kioo.reagent :refer [content set-attr do-> substitute listen]]
             [re-frame.core :as re-frame]
             [ajax.core :as ajax]
-            [cqrs.widgets.map :refer [geomap]] )
+            [cqrs.widgets.map :refer [geomap]]
+            [cqrs.layout :refer [dashboard-content]]
+            )
   (:require-macros [reagent.ratom  :refer [reaction]]
                    [kioo.reagent :refer [defsnippet deftemplate]])
   (:import goog.History)
@@ -121,7 +123,8 @@
       ;(re-frame/dispatch-sync [:initialize-db])
       ;(mount-root)
       ;(reagent/render-component [main-page] (.getElementById js/document "app"))
-      (reagent/render-component [direct-chat] (.getElementById js/document "app-container"))
+      ;(reagent/render-component [direct-chat] (.getElementById js/document "app-container"))
+      (reagent/render-component [dashboard-content] (.getElementById js/document "app-container"))
       ;(reagent/render-component [geomap] (.getElementById js/document "app-container"))
       )
 
