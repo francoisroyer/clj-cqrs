@@ -5,11 +5,13 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/core.async "0.2.385"]
-                 [com.taoensso/timbre "4.1.4"]
+                 [com.taoensso/timbre "4.7.2"]
+                 [com.taoensso/encore "2.67.1"]
                  [org.clojure/core.match "0.3.0-alpha4"]
                  [com.stuartsierra/component "0.3.1"]
                  [org.clojure/tools.namespace "0.2.11"]
                  [org.clojure/tools.cli "0.3.1"]
+                 [org.clojure/tools.reader "0.10.0"]
                  [com.rpl/specter "0.11.2"]
                  [clj-time "0.12.0"]
                  [prismatic/schema "1.0.3"]
@@ -25,7 +27,9 @@
 
                  ;API
                  [metosin/compojure-api "1.1.5" :exclusions [ring/ring-core]]
-                 [ring/ring-core "1.5.0"]
+                 [ring/ring-core "1.5.0" :exclusion [org.clojure/tools.reader]]
+                 [ring/ring-defaults "0.2.1"]
+                 [org.clojure/tools.reader "0.10.0"]
                  [org.webjars/webjars-locator "0.27"]
                  [buddy/buddy-auth "1.1.0"]
                  [jstrutz/hashids "1.0.1"]

@@ -11,7 +11,7 @@
     [ring.util.http-response :refer :all]
     ;[taoensso.sente :as sente]
     ;[taoensso.sente.server-adapters.immutant      :refer (get-sch-adapter)]
-    [clojure.core.async :refer [go-loop <! >!]]
+    ;[clojure.core.async :refer [go-loop <! >!]]
     [cqrs.core.events :refer :all]
     )
   (:gen-class)
@@ -33,7 +33,12 @@
   (let [uuid (str (java.util.UUID/randomUUID))]
     (publish q (assoc cmd :uuid uuid) :encoding :fressian)
     ;Return error 503 if queue unavailable
-    (accepted {:id uuid :message "Command accepted" :_links {:status (str "/command/" uuid)}})
+    (accepted {:id uuid
+               :message "Command accepted"
+               :_links {:status (str "/command/" uuid)
+                        :status-channel (str "/commands") ;ws:// ?
+                        }
+               })
     ))
 
 ;(go-loop []
@@ -138,22 +143,6 @@
 ;================================================================================
 
 ;TODO when client connected, open a subscription to new topic?
-;clojure.lang.ExceptionInfo: Insufficient com.taoensso/encore version.
-; You may have a Leiningen dependency conflict (see http://goo.gl/qBbLvC for solution).
-; {:min-version "2.67.1", :your-version "2.18.0"}, compiling:(taoensso/sente.cljc:85:1)
-
-;(let [{:keys [ch-recv send-fn connected-uids
-;              ajax-post-fn ajax-get-or-ws-handshake-fn]}
-;      (sente/make-channel-socket! (get-sch-adapter) {})]
-;
-;  (def ring-ajax-post                ajax-post-fn)
-;  (def ring-ajax-get-or-ws-handshake ajax-get-or-ws-handshake-fn)
-;  (def ch-chsk                       ch-recv) ; ChannelSocket's receive channel
-;  (def chsk-send!                    send-fn) ; ChannelSocket's send API fn
-;  (def connected-uids                connected-uids) ; Watchable, read-only atom
-;  )
-
-;Return Command status and generated events for this user only
 
 (s/defschema CommandStatus {:uuid s/Str
                             :command s/Str
@@ -184,21 +173,6 @@
            ;(GET  "/commands" req (ring-ajax-get-or-ws-handshake req))
            ;(POST "/commands" req (ring-ajax-post                req))
            ))
-
-
-;connect! -> should start async thread on request/respond deref
-;Or should subscribe in pubsub to Event Topic, and filter all events on :uuid
-
-;(defn ws-handler [request]
-;  (async/as-channel
-;    request
-;    {:on-open connect!
-;     :on-close disconnect!
-;     :on-message handle-message!})
-; )
-
-
-
 
 
 ;define Command

@@ -3,10 +3,13 @@
   Each service should subscribe to a records topic and one or more Event topic.
   Each component of the service is responsible for its state lifecycle.
   "
-  (:require [clojure.core.async :refer [chan >!! <!! close!]]
-            [com.stuartsierra.component :as component :refer [using]]
-            [onyx.plugin.core-async :refer [take-segments!]]
-            [onyx.api]))
+  ;(:require [clojure.core.async :refer [chan >!! <!! close!]]
+  ;          [com.stuartsierra.component :as component :refer [using]]
+  ;          [onyx.plugin.core-async :refer [take-segments!]]
+  ;          [onyx.api])
+  )
+
+(comment
 
 (defn my-inc [{:keys [n] :as segment}]
   (assoc segment :n (inc n)))
@@ -75,7 +78,6 @@
    :onyx.messaging/peer-port 40200
    :onyx.messaging/bind-addr "localhost"})
 
-(comment
   (def env (onyx.api/start-env env-config))
 
   (def peer-group (onyx.api/start-peer-group peer-config))

@@ -44,3 +44,4 @@
 ;TODO remote webhook or microservice - Push Avro or JSON via POST to a given URL
 
 ;TODO expose here service routes
+;TODO cli for stand-alone deployment? Docker?

@@ -47,9 +47,6 @@
                                               id owner name created-at)]) ))
 
 
-;TODO how to save model events into view stores
-;Create/Update/Delete
-
 (defn model-routes [cmdqueue]
   (context "/api" []
            :tags ["Models"]

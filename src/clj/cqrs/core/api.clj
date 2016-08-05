@@ -24,6 +24,7 @@
     [immutant.codecs :refer [make-codec register-codec]]
     [immutant.codecs.fressian :refer [register-fressian-codec]]
     [cqrs.core.commands :refer :all]
+    [cqrs.core.ws :refer [ws-ring-handler]]
     [cqrs.domains.model :refer [model-routes]]
     )
   (:gen-class)
@@ -172,23 +173,29 @@
 
 
 (defn api-routes [cmd-queue cmd-handler]
-  (api
-    {:swagger
-     {:ui   "/api-docs"
-      :spec "/swagger.json"
-      :data {:info {:title       "Sample API"
-                    :description "Compojure Api example"}
-             :tags [{:name "api", :description "some apis"}]}}}
-    (model-routes cmd-queue)
-    (commands-routes cmd-handler)
-    ))
+  (-> (api
+        {:swagger
+         {:ui   "/api-docs"
+          :spec "/swagger.json"
+          :data {:info {:title       "Sample API"
+                        :description "Compojure Api example"}
+                 :tags [{:name "api", :description "some apis"}]}}}
+        (model-routes cmd-queue)
+        )
+      )
+  )
 
 
 (defrecord ApiComponent [options command-queue command-handler]
   component/Lifecycle
   (start [this]
     (info (str "Starting API with options " options))
-    (let [app (routes (api-routes command-queue command-handler)
+    (let [app (routes ws-ring-handler
+                      (api-routes command-queue command-handler)
+                      ;(-> ws-routes
+                      ;    ring.middleware.keyword-params/wrap-keyword-params
+                      ;    ring.middleware.params/wrap-params)
+                      (commands-routes command-handler)
                       ui-routes)
           ]
       (assoc this :handler (:handler app) )))

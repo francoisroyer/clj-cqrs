@@ -142,17 +142,38 @@
 
 (defn run-query [system q])
 
-;TODO "saga" or EventStory in reaction to Events for integration of other services etc...
-;TODO scheduled events -> Quartz
 
 ;TODO IAM with Keycloak or buddy
-
 ;TODO deploy on wildfly/openshift/jenkins
+;TODO "saga" or EventStory in reaction to Events for integration of other services etc...
+;TODO scheduled events -> Quartz - should subscribe to all events - apply-until (without side effects)
 
-;TODO send command status/events via ws
-;TODO command handler daemon sharding
+;TODO send command status/events via ws - have connected users subscribe to aggregates?
+;TODO execute command handler in a transaction? Then add a parameter sync=true - send back _links if async, or use websocket for both directions
+;TODO command handler daemon + topic sharding - based on aggid hash?
 ;TODO store/send events as Avro records - push to Kafka or HornetQ Rest topics or webhooks (Kafka/Hermes)
+;TODO only Events should be modeled/versioned as Avro, not Commands
 
+;TODO transaction for writing state to agg cache and sending events to event store / event topic
+
+;TODO get in ENV variable or edn: /api/green/commands or /api/v1.0.1/commands
+;name wars as cqrs-green or cqrs-blue OR cqrs-0.2.1 OR cqrs-0.3.0
+;git-flow -> get tag on master?
+
+;Avro schemas for Commands and Events? Avro service for Aggregates?
+;clara rules for aggregates? Or object methods?
+;(defrule update-billing-address
+;         "Updates billing address, ensures unique default"
+;         [UpdateDeliveryAddress (= ?client client)]
+;         [AccountAggregate (= ?client client) (= ?name name)]
+;         =>
+;         (->DeliveryAddressUpdated address zip-code city)
+; )
+
+;Swagger API (YAML)
+;OperationId ->  method name (command handler or service)
+;AggregateId -> which agg to load
+;Clara rules -> execute rules on aggregate, command, generate events
 
 
 (defn -main [& args]
