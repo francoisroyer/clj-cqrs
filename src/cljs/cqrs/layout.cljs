@@ -1,6 +1,8 @@
 (ns cqrs.layout
   (:require [reagent.core :as r]
-            [cljsjs.react-grid-layout]))
+            [cljsjs.react-grid-layout]
+            [cqrs.core.ws :refer [test-ws]]
+            ))
 
 (defn onLayoutChange [on-change prev new]
       ;; note the need to convert the callbacks from js objects
@@ -96,7 +98,9 @@
                     :width 1200
                     ;:onLayoutChange #(onLayoutChange state layout %)
                     }
-        [:div.box.react-grid-item {:key "a"} [:div.box-header.with-border.grid-toolbar [:h3.box-title "Panel a"]] [:div.box-body.grid-content "This is content" [:span.react-resizable-handle]]]
-        [:div.box.react-grid-item {:key "b"} [:div.box-header.with-border.grid-toolbar [:h3.box-title "Panel b"]] [:div.box-body.grid-content "This is content" [:span.react-resizable-handle] ]]
+        [:div.box.react-grid-item {:key "a"} [:div.box-header.with-border.grid-toolbar [:h3.box-title "Panel a"]]
+         [:div.box-body.grid-content "This is content" [:span.react-resizable-handle]]]
+        [:div.box.react-grid-item {:key "b"} [:div.box-header.with-border.grid-toolbar [:h3.box-title "Panel b"]]
+         [:div.box-body.grid-content "This is content" [:div.btn.button.btn-default {:on-click test-ws} "ws"] [:span.react-resizable-handle] ]]
         ]])
 

@@ -123,7 +123,6 @@
   (onyx.api/shutdown-peer-group peer-group)
 
   (onyx.api/shutdown-env env)
-)
 
 (defrecord OnyxEngine [options]
   component/Lifecycle
@@ -135,3 +134,5 @@
 
 (defn build-onyx-engine [config]
   (map->OnyxEngine {:options config}))
+
+)

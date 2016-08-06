@@ -13,6 +13,7 @@
     ;[taoensso.sente.server-adapters.immutant      :refer (get-sch-adapter)]
     ;[clojure.core.async :refer [go-loop <! >!]]
     [cqrs.core.events :refer :all]
+    [cqrs.core.ws :refer [broadcast-command]]
     )
   (:gen-class)
   )
@@ -81,6 +82,9 @@
 ;TODO hash based routing on agg id - start up to N command handlers
 ;TODO encapsulate agg cache in aggregate-repository
 
+
+;TODO add handler - connected clients -> should filter created commands on their client ids, chsk-send! command and its events to each
+
 (defrecord CommandHandler [options command-queue event-repository]  ;state-cache for Aggregate objects?
   component/Lifecycle
   (start [this]
@@ -107,6 +111,8 @@
                                                             :events events
                                                             })
                                   (catch Exception e (println "WARNING - Command status cache unavailable")))
+                             ;broadcast to clients
+                             (broadcast-command (assoc cmd :events events))
                              ;TODO add aggid / version here if success - when events exist
                              (insert-events event-repository aggid events) ))
           handler (listen (:queue command-queue) handle-command)

@@ -17,8 +17,8 @@
 (reset! sente/debug-mode?_ true) ; Uncomment for extra debug info
 
 (let [;; Serializtion format, must use same val for client + server:
-      packer :edn ; Default packer, a good choice in most cases
-      ;; (sente-transit/get-transit-packer) ; Needs Transit dep
+      packer ;:edn
+       (sente-transit/get-transit-packer) ; Needs Transit dep
 
       chsk-server
       (sente/make-channel-socket-server!
@@ -88,6 +88,15 @@
              (<! (async/timeout 10000))
              (when @broadcast-enabled?_ (broadcast! i))
              (recur (inc i)))))
+
+
+(defn broadcast-command [command]
+ (let [uids (:any @connected-uids)]
+            (debugf "Broadcasting command: %s uids" (count uids))
+            (doseq [uid uids]
+              (chsk-send! uid
+                          [:cqrs/command command ]))))
+
 
 ;;;; Sente event handlers
 
