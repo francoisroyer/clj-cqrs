@@ -30,6 +30,7 @@
 (defn sch [r] (last (last (schema.utils/class-schema r))))
 
 ;Call get-agg-id to route to correct topic to ensure routing to single daemon handler
+;TODO get client-id to send back command status via ws
 (defn accept-command [q cmd]
   (let [uuid (str (java.util.UUID/randomUUID))]
     (publish q (assoc cmd :uuid uuid) :encoding :fressian)

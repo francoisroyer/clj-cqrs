@@ -6,12 +6,12 @@
             [goog.events :as events]
             [goog.history.EventType :as EventType]
             [cljsjs.react :as react]
-            [kioo.reagent :refer [content set-attr do-> substitute listen]]
+            [kioo.reagent :refer [content html set-attr do-> substitute listen]]
             [re-frame.core :as re-frame]
             [ajax.core :as ajax]
             [cqrs.widgets.map :refer [geomap]]
             [cqrs.layout :refer [dashboard-content]]
-            [cqrs.core.ws :refer [start-router!]]
+            [cqrs.core.ws :refer [stop-router! start-router!]]
             )
   (:require-macros [reagent.ratom  :refer [reaction]]
                    [kioo.reagent :refer [defsnippet deftemplate]])
@@ -121,6 +121,15 @@
 
 
 
+(defsnippet login-box
+            "META-INF/resources/webjars/adminlte/2.3.3/pages/examples/login.html"
+            [:div.login-box]
+            []
+            {[:div.checkbox]   (content nil)
+             [:div.login-logo] (content (html [:a {:href "#"} [:b "CQRS"] " DEMO"]))
+             })
+
+
 ;init database from all loaded components - register their handlers
 ;connect to remote API and channels if config ready
 (defn ^:export init []
@@ -130,18 +139,22 @@
       ;(reagent/render-component [main-page] (.getElementById js/document "app"))
       ;(reagent/render-component [direct-chat] (.getElementById js/document "app-container"))
       (reagent/render-component [dashboard-content] (.getElementById js/document "app-container"))
+  ;(if (:authenticated? @app-state)
+  ;(reagent/render-component [login-box] (.-body js/document))
       ;(reagent/render-component [geomap] (.getElementById js/document "app-container"))
       (start-router!)
       )
 
+;TODO if login info blank - mount login-box
 
 (defn reload []
-      (println "Hello again app!!")
+      (stop-router!)
+      (println "Restarting app.")
       (init)
       )
 
 (init)
-(println "Hello app!!")
+(println "Starting app.")
 
 
 ;TODO apps datasets connectors lab observatory/dashboards analytics/stats help doc api

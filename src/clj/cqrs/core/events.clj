@@ -6,6 +6,7 @@
     [immutant.messaging :refer :all]
     [immutant.messaging :refer [publish]]
     [schema.core :as s]
+    [abracad.avro :as avro]
     )
   )
 
@@ -14,11 +15,11 @@
   )
 
 ;================================================================================
-; CQRS COMPONENTS
+; EVENT STORE COMPONENTS
 ;================================================================================
 
 ;TODO EventStore - file or DB (PG-hstore, mapDB, H2, Dynamo...)
-
+;TODO Avro? Nippy?
 
 
 (defprotocol IEventStore
@@ -35,18 +36,59 @@
     ;        (snapshot @world))
     ))
 
+(def schema
+  (avro/parse-schema
+    {:type :record
+     :name "LongList"
+     :aliases ["LinkedLongs"]
+     :fields [{:name "value", :type :long}
+              {:name "next", :type ["LongList", :null]}]}))
+
+;TODO get schema from all events - build app schema - store in S3
+;TODO store with nippy in SQL DB? Use nippy instead of fressian?
+
+;(with-open [adf (avro/data-file-writer "snappy" schema "example.avro")]
+;  (.append adf {:value 0, :next nil})
+;  (.append adf {:value 8, :next {:value 16, :next nil}}))
+
+;(with-open [adf (avro/data-file-reader "example.avro")]
+;  (doall (seq adf)))
+
+;(s/defrecord TestRecord [a :- s/Str b :- s/Str])
+
+;TODO build schema from all events namespaces? or do it dynamically on write?
+;TODO defevent and defcommand to also define serde?
+
+(def h2-event-schema
+  "CREATE TABLE session_store (\n
+session_id VARCHAR(36) NOT NULL,\n
+idle_timeout BIGINT DEFAULT NULL,\n
+absolute_timeout BIGINT DEFAULT NULL,\n
+value BINARY(10000),\n
+PRIMARY KEY (session_id)\n
+)")
+
+;app-id user-id agg agg-id event tx-id dt data
+
+
 ;Should implement IEventStore with store, retrieve-events etc...
 (defrecord EventStore [options]
+  ;IEventStore
+  ;(setup [this) ;setup schema / thread daemon
+  ;(store-events [this events])
+  ;(get-events [this agg agg-id tx-id & max-tx-id])
   component/Lifecycle
   (start [this]
-    (info (str "Starting EventStore component with options " options))
+    (info (str "Starting dev EventStore component with options " options))
     (assoc this :store (atom {})))
   (stop [this]
     (info "Stopping EventStore")
     (dissoc this :store))
   )
 
-(defn build-eventstore [config]
+(defn build-eventstore
+  "Build EventStore in dev or prod mode"
+  [config]
   (map->EventStore {:options config}))
 
 
@@ -89,6 +131,8 @@
 (defn build-eventrepo [config]
   (map->EventRepository {:options config}))
 
+;TODO EventStore schema
+;application-id agg agg-id version received-at created-at cmd-id user-id event (nippy?)
 
 ;================================================================================
 ; Event pub/sub

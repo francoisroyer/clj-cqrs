@@ -15,16 +15,18 @@
     [schema.core :as s]
     [compojure.api.sweet :refer :all]
     [net.cgrand.enlive-html :as html :refer [substitute attr-has add-class remove-class
-                                             do-> before append prepend html deftemplate content last-child
+                                             do-> before append prepend html deftemplate defsnippet
+                                             content last-child
                                              set-attr nth-child nth-of-type]]
     [ring.util.http-response :refer :all]
+    [ring.util.response :refer [redirect]]
     [ring.middleware.assets :refer [wrap-webjars wrap-rename-webjars wrap-cljsjs]]
     [ring.middleware.resource :refer [wrap-resource]]
     [immutant.messaging :refer [publish]]
     [immutant.codecs :refer [make-codec register-codec]]
     [immutant.codecs.fressian :refer [register-fressian-codec]]
     [cqrs.core.commands :refer :all]
-    [cqrs.core.ws :refer [ws-ring-handler]]
+    [cqrs.core.ws :as ws :refer [ws-ring-handler]]
     [cqrs.domains.model :refer [model-routes]]
     )
   (:gen-class)
@@ -151,13 +153,54 @@
                                              )
              )
 
+(defsnippet login-box
+             "META-INF/resources/webjars/adminlte/2.3.3/pages/examples/login.html"
+             [:div.login-box]
+             []
+            [:div.checkbox] (content nil)
+            [:div.login-logo] (content (html [:a {:href "#"} [:b "CQRS"] " DEMO" ]))
+            [:form] (set-attr :action "/auth/login")
+            )
+
+(deftemplate logintpl
+             "META-INF/resources/webjars/adminlte/2.3.3/index2.html"
+             []
+             [:body] (do->
+                       (add-class "login-page")
+                       (content (login-box)))
+             )
+
 (defn basepage []
   (apply str (basetpl)))
+
+(defn loginpage []
+  (apply str (logintpl)))
+
+;TODO differentiate user-id and client-id
+;TODO wrap-session? Generate uuid server side - map client-id to user-id when authenticated
+(defn login-handler
+  [ring-req]
+  (let [{:keys [session params]} ring-req
+        {:keys [user-id]} params
+        redir "/"]
+    (debug "Login request: %s" params)
+    ;{:status 200 :session (assoc session :uid user-id)}
+    (-> (redirect redir)
+        (assoc :session (assoc session :uid user-id))
+        )))
+
+(def auth-routes
+  (routes
+    ;(GET "/auth/whoami" req (profile req))
+    (POST "/auth/login" ring-req (login-handler ring-req))
+    )
+  )
 
 (def ui-routes
     (->
       (routes
         (GET "/app/home" req (basepage))
+        (GET "/app/login" req (loginpage))
         (ANY "/*" []
              :responses {404 String}
              (not-found "These aren't the droids you're looking for."))
@@ -186,21 +229,28 @@
   )
 
 
+;TODO add middleware to add client-id in session - once logged, add entry user-id -> client-id
+
 (defrecord ApiComponent [options command-queue command-handler]
   component/Lifecycle
   (start [this]
     (info (str "Starting API with options " options))
-    (let [app (routes ws-ring-handler
-                      (api-routes command-queue command-handler)
-                      ;(-> ws-routes
-                      ;    ring.middleware.keyword-params/wrap-keyword-params
-                      ;    ring.middleware.params/wrap-params)
-                      (commands-routes command-handler)
-                      ui-routes)
+    (let [app (routes
+                auth-routes
+                ws-ring-handler
+                (api-routes command-queue command-handler)
+                ;(-> ws-routes
+                ;    ring.middleware.keyword-params/wrap-keyword-params
+                ;    ring.middleware.params/wrap-params)
+                (commands-routes command-handler)
+                ui-routes
+                )
           ]
+      (ws/start-router!)
       (assoc this :handler (:handler app) )))
   (stop [this]
     (info "Stopping API")
+    (ws/stop-router!)
     this))
 
 
@@ -274,6 +324,10 @@
 ;get-records
 ;Avro, time series, 2D image...
 ;Has dimensions
+
+
+(defrecord Datasource [name owner created-at type schema resource])
+;references a resource (URL) and a read policy - produces datasets or documents?
 
 (defrecord Document [name owner created-at type resource])
 ;pdf, html ...

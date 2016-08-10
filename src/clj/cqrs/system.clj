@@ -42,7 +42,7 @@
                  :last-tested-at (:created-at event)))
   )
 
-
+;TODO should call relevant methods on state / agg! Should agg emit events?
 (s/defrecord TestCommand [message]
              ICommand
              (get-aggregate-id [this] :test)
@@ -144,19 +144,37 @@
 
 
 ;TODO IAM with Keycloak or buddy
+;TODO auth service - activity based UI and RBAC resource listing - http://clojutre.org/2015/slides/kekkonen_clojutre2015_print.pdf
+
 ;TODO deploy on wildfly/openshift/jenkins
 ;TODO "saga" or EventStory in reaction to Events for integration of other services etc...
-;TODO scheduled events -> Quartz - should subscribe to all events - apply-until (without side effects)
+;TODO service for scheduled events -> Quartz - should subscribe to all events - apply-until (without side effects)
+;TODO monitoring service / dashboard - Riemann - Docker see samsara?
+;TODO datasource crawl service on onyx/jboss topic
 
-;TODO send command status/events via ws - have connected users subscribe to aggregates?
-;TODO execute command handler in a transaction? Then add a parameter sync=true - send back _links if async, or use websocket for both directions
+;TODO login screen in dev/prod mode
+;TODO redirect to login if id missing in session
+;TODO auth client with unique id, or login! Insert client-id in command if authenticated.
+
+;TODO receive command status/events via ws - have CommandHandler look up command.client-id in cache and broadcast to connected aliases
+;TODO client side: handle-command-correlation -> receive via ws events with correlation id equal to command uuid, or poll, retry and time out
+;TODO send command to server via ws via client re-frame handler - same channel?
+
 ;TODO command handler daemon + topic sharding - based on aggid hash?
+;TODO transaction for writing state to agg cache and sending events to event store / event topic
+;TODO execute command handler in a transaction? Then add a parameter sync=true - send back _links if async, or use websocket for both directions
+
+;TODO on connection of service, ask EventRepository to reply with all events since :last-update
+;TODO provide implementations for EventStore: h2, pg, file...
+;TODO add /service/:service/events?version=xxx endpoint to retrieve events for a given service/topic?
+
+;TODO Command + Aggregate + Event specs + Services topics -> Avro? Datalog? Swagger?
+
 ;TODO store/send events as Avro records - push to Kafka or HornetQ Rest topics or webhooks (Kafka/Hermes)
+;TODO get in ENV variable or edn: /api/green/commands or /api/v1.0.1/commands
 ;TODO only Events should be modeled/versioned as Avro, not Commands
 
-;TODO transaction for writing state to agg cache and sending events to event store / event topic
 
-;TODO get in ENV variable or edn: /api/green/commands or /api/v1.0.1/commands
 ;name wars as cqrs-green or cqrs-blue OR cqrs-0.2.1 OR cqrs-0.3.0
 ;git-flow -> get tag on master?
 

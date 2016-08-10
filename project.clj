@@ -17,6 +17,7 @@
                  [prismatic/schema "1.0.3"]
                  [prismatic/plumbing "0.5.2"]
                  [org.clojure/data.fressian "0.2.1"]
+                 [com.damballa/abracad "0.4.13"]
                  [environ "1.0.0"]
 
                  ;[amazonica "0.3.73"]
@@ -24,6 +25,7 @@
                  [org.immutant/wildfly "2.1.5"]
                  ;[io.undertow/undertow-core "1.3.15.Final"] ;TODO fix dep on Jackson
                  ;[org.keycloak/keycloak-undertow-adapter "1.9.7.Final"]
+                 [org.keycloak/keycloak-undertow-adapter "2.0.0.Final"]
 
                  ;API
                  [metosin/compojure-api "1.1.5" :exclusions [ring/ring-core]]
@@ -31,11 +33,12 @@
                  [ring/ring-defaults "0.2.1"]
                  [org.clojure/tools.reader "0.10.0"]
                  [org.webjars/webjars-locator "0.27"]
-                 [buddy/buddy-auth "1.1.0"]
+                 ;[buddy/buddy-auth "1.1.0"]
                  [jstrutz/hashids "1.0.1"]
                  ;[liberator "0.14.1"]
                  ;[cheshire "5.6.2"]
 
+                 ;UI
                  [org.webjars.bower/adminlte "2.3.3"]
 
                  ;Database
@@ -85,6 +88,7 @@
                                   ;[org.apache.solr/solr-solrj "6.1.0"]
                                   ;[clojurewerkz/elastisch "3.0.0-beta1"]
                                   ;[org.elasticsearch/elasticsearch "2.3.3"]
+                                  [com.h2database/h2 "1.4.192"]
                                   [org.elasticsearch/elasticsearch "1.7.3"]
                                   [clojurewerkz/elastisch "2.2.2"]
                                   [org.onyxplatform/onyx "0.9.9"]

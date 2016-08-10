@@ -42,6 +42,14 @@ Workbooks/Cases/study/investigation
 Dataflow - realtime (push or pull) or batch queries
 
 
+## Docker services
+
+#Getting started with Keycloak: http://blog.keycloak.org/2015/10/getting-started-with-keycloak.html
+docker run jboss/keycloak --name keycloak
+docker inspect --format='.NetworkSettings.IPAddress' keycloak
+Or: 
+docker run jboss/keycloak --name keycloak -p 8080:8080
+
 ## License
 
 Copyright © 2016 Francois Royer - Datasio - froyer@datasio.com

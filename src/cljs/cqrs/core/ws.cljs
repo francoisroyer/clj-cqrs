@@ -63,14 +63,16 @@
                 ch-chsk event-msg-handler)))
 
 (defn ^export test-ws []
+      ;(sente/chsk-reconnect! chsk)
       (chsk-send! ; Using Sente
         ;[:taoensso.sente/nil-uid {:name "Rich Hickey" :type "Awesome"}] ; Event
-        [:example/test-rapid-push]
+        [:cqrs/test {:message "hello"}]
         1000 ; Timeout
         ;; Optional callback:
         (fn [reply] ; Reply is arbitrary Clojure data
             (if (sente/cb-success? reply)
-              (println reply)
+              (println (str "ok: " reply))
               (println (str "error: " reply))
               )))
       )
+

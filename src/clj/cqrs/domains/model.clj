@@ -47,6 +47,11 @@
                                               id owner name created-at)]) ))
 
 
+;Aggregate - holds all business domain logic
+;Should be backed by AggregateRepository in-memory, or jdbc
+;(defrecord ModelAggregate [])
+
+
 (defn model-routes [cmdqueue]
   (context "/api" []
            :tags ["Models"]
