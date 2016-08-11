@@ -29,8 +29,9 @@
 
 (defn sch [r] (last (last (schema.utils/class-schema r))))
 
-;Call get-agg-id to route to correct topic to ensure routing to single daemon handler
+;TODO Call get-agg-id to route to correct topic to ensure routing to single daemon handler - add hashing
 ;TODO get client-id to send back command status via ws
+;TODO check user groups + authorized activities here?
 (defn accept-command [q cmd]
   (let [uuid (str (java.util.UUID/randomUUID))]
     (publish q (assoc cmd :uuid uuid) :encoding :fressian)
@@ -48,7 +49,30 @@
 ;           (>! message-queue-chan msg)
 ;           (recur)))
 
+(def murmur
+  (let [m (com.google.common.hash.Hashing/murmur3_128)]
+    (fn ^Long [^String s]
+      (-> (doto (.newHasher m)
+            (.putString s com.google.common.base.Charsets/UTF_8))
+          (.hash)
+          (.asLong)
+          ))))
 
+(defn hash-to-bucket [e B]
+  (let [h (+ 0.5 (/
+           (murmur e)
+           (Math/pow 2 64)
+           ))]
+    (int (Math/floor (* h B)))
+  ))
+
+(map #(hash-to-bucket % 10) ["a" "b" "c" "cc" "d" "ee" "f" "i" "j" "k" "l" "m"
+                             "n" "o" "p" "q" "r" "s" "t" "u" "vv" "v" "x" "y" "z" "ab" "bc" "cd"
+                             "user/1" "user/2"
+                             ])
+
+;TODO rename into topic - add N topics given :cmd-partitions option
+;Embed in CommandHandler to handle sync=true mode?
 (defrecord CommandQueue [options]
   component/Lifecycle
   (start [this]
@@ -118,7 +142,16 @@
                              (insert-events event-repository aggid events) ))
           handler (listen (:queue command-queue) handle-command)
           ;Start N daemons to shard command topic handling
-          daemon (singleton-daemon "command-handler" (fn [] (println "daemon started") ) (fn [] (println "daemon stopped") ))
+          daemon (let [dhandler (atom nil)
+                       dname "command-handler-1"]
+                   (singleton-daemon dname
+                                     (fn []
+                                       ;TODO subscribe to topic 1 in command-queue - rename also command-queue to topic!
+                                       ;(reset! dhandler (listen (:queue command-queue) handle-command))
+                                       (println "daemon started"))
+                                     (fn []
+                                       ;(.close @dhandler)
+                                       (println "daemon stopped") )))
           ]
       (.put aggregates :test {:_version 0})
       (assoc this :handler handler
