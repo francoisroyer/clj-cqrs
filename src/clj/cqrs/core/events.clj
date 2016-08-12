@@ -101,25 +101,25 @@ PRIMARY KEY (session_id)\n
 ;Create fixtures?
 ;sync / update method: At start-up, asks state-cache version-id - if behind, will replay events
 ;add a synchronous update! method?
-(defrecord EventRepository [options event-store event-topic state-cache]
+(defrecord EventRepository [options event-store event-bus state-cache]
   component/Lifecycle
   (start [this]
     (info (str "Starting EventRepository component with options " options) )
     (assoc this :event-store event-store
-                :event-topic event-topic))
+                :event-bus event-bus))
   (stop [this]
     (info "Stopping EventRepository")
     this))
 
 (defn insert-events
-  "Insert events in event-store and publish them via event-topic"
+  "Insert events in event-store and publish them via event-bus"
   [event-repository aggid events]
   ;Save events
   (swap! (get-in event-repository [:event-store :store])
          update-in [aggid] concat events)
   ;Publish events
   (doseq [event events]
-    (publish (-> event-repository :event-topic :topic) event :encoding :fressian))
+    (publish (-> event-repository :event-bus :topic) event :encoding :fressian))
   )
 
 (defn load-events
@@ -138,17 +138,17 @@ PRIMARY KEY (session_id)\n
 ; Event pub/sub
 ;================================================================================
 
-(defrecord EventTopic [options]
+(defrecord EventBus [options]
   component/Lifecycle
   (start [this]
-    (info (str "Starting EventTopic component with options " options) )
+    (info (str "Starting EventBus component with options " options) )
     (assoc this :topic (topic "events"))
     )
   (stop [this]
-    (info "Stopping EventTopic")
+    (info "Stopping EventBus")
     (stop (:topic this))
     this))
 
-(defn build-eventtopic [config]
-  (map->EventTopic {:options config}))
+(defn build-eventbus [config]
+  (map->EventBus {:options config}))
 

@@ -1,7 +1,7 @@
 (ns cqrs.engines.elasticsearch
   "Elasticsearch store component
   Implements EventService - bulk load when reseeding, query etc...
-  Calls IRecord functions from events retrieved from event queue
+  Calls IRecord functions from events retrieved from an event-bus topic
   "
   (:require
     [taoensso.timbre :refer [log trace debug info warn error]]
@@ -14,7 +14,7 @@
   (:import org.elasticsearch.node.NodeBuilder)
   )
 
-(defrecord ElasticsearchIndexEngine [options event-queue]
+(defrecord ElasticsearchIndexEngine [options event-bus]
   component/Lifecycle
   (start [this]
     (info (str "Starting ElasticsearchIndexStore with options " options) )

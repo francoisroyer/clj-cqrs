@@ -21,11 +21,11 @@
 ;  (apply [event]) ;should return [:method :payload]  ;e.g. increment counter etc
 ;  )
 
-(defrecord UsageService [options event-topic index-engine]
+(defrecord UsageService [options event-bus index-engine]
   component/Lifecycle
   (start [this]
     (let [update (fn [event] (index-event index-engine event) )
-          listener (subscribe (:topic event-topic) "usage-service" update)]
+          listener (subscribe (:topic event-bus) "usage-service" update)]
       (info (str "Starting Usage Service component with options " options) )
       (assoc this
         :listener listener
@@ -33,7 +33,7 @@
   (stop [this]
     (info "Stopping Usage Service")
     (.close (:listener this))
-    (unsubscribe (:topic event-topic) (:subscription-name this) )
+    (unsubscribe (:topic event-bus) (:subscription-name this) )
     (dissoc this :subscription-name)))
 
 

@@ -86,18 +86,18 @@
   (let [{:keys [host port]} config]
     (component/system-map
       :command-bus (build-commandbus config )
-      :event-repository (using (build-eventrepo config) [:event-store :event-topic])
+      :event-repository (using (build-eventrepo config) [:event-store :event-bus])
       :command-handler (using (build-commandhandler config) [:event-repository :command-bus] )
       ;:agg-store ;use immutant.cache
       :event-store (build-eventstore config)
-      :event-topic (build-eventtopic config)
+      :event-bus (build-eventbus config)  ;TODO rename to bus!
       ;:resource-staging ;S3? For datasets or documents
-      ;:record-topic ;AWS SQS? For coerced records, i.e. InsertRecord{:type ... :fields ...}
+      ;:record-bus ;AWS SQS? For coerced records, i.e. InsertRecord{:type ... :fields ...}
       ;Object-topic ;send Objects?
       ;handle insert/serving of records given their types - ex: Solr or Elasticsearch
-      :index-engine (using (build-index-engine config) [:event-topic])
-      ;Subscribe each event-service to events, insert as stream or batch if restart
-      :usage-service (using (build-usage-service config) [:event-topic :index-engine] )
+      :index-engine (using (build-index-engine config) [:event-bus])
+      ;Subscribe each event-service to a dedicated topic in event-bus, insert as stream or batch if restart
+      :usage-service (using (build-usage-service config) [:event-bus :index-engine] )
       :api (using (build-api (:api config)) [:command-bus :command-handler] )
       :web-server (using (build-webserver config) [:api])
       )))
