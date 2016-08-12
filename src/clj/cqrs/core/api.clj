@@ -215,7 +215,7 @@
 ;TODO any call fo /app/* should be routed to webjar /adminlte
 
 
-(defn api-routes [cmd-queue cmd-handler]
+(defn api-routes [cmd-bus cmd-handler]
   (-> (api
         {:swagger
          {:ui   "/api-docs"
@@ -223,7 +223,7 @@
           :data {:info {:title       "Sample API"
                         :description "Compojure Api example"}
                  :tags [{:name "api", :description "some apis"}]}}}
-        (model-routes cmd-queue)
+        (model-routes cmd-bus)
         )
       )
   )
@@ -231,14 +231,14 @@
 
 ;TODO add middleware to add client-id in session - once logged, add entry user-id -> client-id
 
-(defrecord ApiComponent [options command-queue command-handler]
+(defrecord ApiComponent [options command-bus command-handler]
   component/Lifecycle
   (start [this]
     (info (str "Starting API with options " options))
     (let [app (routes
                 auth-routes
                 ws-ring-handler
-                (api-routes command-queue command-handler)
+                (api-routes command-bus command-handler)
                 ;(-> ws-routes
                 ;    ring.middleware.keyword-params/wrap-keyword-params
                 ;    ring.middleware.params/wrap-params)

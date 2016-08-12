@@ -52,14 +52,14 @@
 ;(defrecord ModelAggregate [])
 
 
-(defn model-routes [cmdqueue]
+(defn model-routes [cmd-bus]
   (context "/api" []
            :tags ["Models"]
            (POST "/models/CreateModel" []
                  :responses {202 {:schema (sch CommandAccepted) :description "Command accepted"}}
                  :body [cmd (describe (sch CreateModelCommand) "A new model spec")]
                  :summary "Creates a new model"
-                 (accept-command cmdqueue (map->CreateModelCommand cmd) )
+                 (accept-command cmd-bus (map->CreateModelCommand cmd) )
                  )
            ;(GET "/models" []
            ;     :query-params [name :- s/Str]

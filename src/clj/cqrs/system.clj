@@ -85,9 +85,9 @@
 (defn make-app-system [config]
   (let [{:keys [host port]} config]
     (component/system-map
-      :command-queue (build-commandqueue config )
+      :command-bus (build-commandbus config )
       :event-repository (using (build-eventrepo config) [:event-store :event-topic])
-      :command-handler (using (build-commandhandler config) [:event-repository :command-queue] )
+      :command-handler (using (build-commandhandler config) [:event-repository :command-bus] )
       ;:agg-store ;use immutant.cache
       :event-store (build-eventstore config)
       :event-topic (build-eventtopic config)
@@ -98,7 +98,7 @@
       :index-engine (using (build-index-engine config) [:event-topic])
       ;Subscribe each event-service to events, insert as stream or batch if restart
       :usage-service (using (build-usage-service config) [:event-topic :index-engine] )
-      :api (using (build-api (:api config)) [:command-queue :command-handler] )
+      :api (using (build-api (:api config)) [:command-bus :command-handler] )
       :web-server (using (build-webserver config) [:api])
       )))
 
@@ -133,7 +133,7 @@
 (defn run-command! [cmd]
   ;Call accept-command from API routes
   ;Store result of last command in *result*
-  (accept-command (-> system :command-queue :queue) cmd )
+  (accept-command (-> system :command-bus) cmd )
   )
 
 ;(start!)
