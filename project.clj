@@ -42,7 +42,6 @@
                  [org.webjars.bower/adminlte "2.3.3"]
 
                  ;Database
-                 ;[com.layerware/hugsql "0.4.7"]
                  ;[org.postgresql/postgresql "9.4.1207"]
                  ;[com.h2database/h2 "1.4.192"]
 
@@ -51,11 +50,9 @@
                  [enlive "1.1.6"]
                  [com.taoensso/sente "1.10.0"]
                  [datascript "0.15.2"]
-                 ;[reagent "0.5.1"]
                  [reagent "0.6.0-rc" :exclusions [cljsjs/react]]
                  [cljsjs/react-with-addons "15.1.0-0"]
                  [re-frame "0.7.0"]
-                 ;[sablono "0.7.2"]
                  [kioo "0.5.0-SNAPSHOT"]
                  [secretary "1.2.3"]
                  [cljs-ajax "0.5.8"]

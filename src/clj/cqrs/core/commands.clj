@@ -114,11 +114,8 @@
 
 
 
-;TODO Should be a Singleton/daemon subscribing to a Command topic - i.e. call Cmd get-agg-id before inserting in topic
 ;TODO hash based routing on agg id - start up to N command handlers
 ;TODO encapsulate agg cache in aggregate-repository
-
-
 ;TODO add handler - connected clients -> should filter created commands on their client ids, chsk-send! command and its events to each
 
 (defrecord CommandHandler [options command-bus event-repository]  ;state-cache for Aggregate objects?
@@ -151,35 +148,34 @@
                              (broadcast-command (assoc cmd :events events))
                              ;TODO add aggid / version here if success - when events exist
                              (insert-events event-repository aggid events) ))
-          handler (listen (:queue command-bus) handle-command)
+          ;handler (listen (:queue command-bus) handle-command)
           ;Start N daemons to shard command topic handling
-          daemon (let [dhandler (atom nil)
-                       dname "command-handler-1"]
-                   (singleton-daemon dname
-                                     (fn []
-                                       ;TODO subscribe to topic 1 in command-bus
-                                       ;(reset! dhandler (listen (:queue command-bus) handle-command))
-                                       (println "daemon started"))
-                                     (fn []
-                                       ;(.close @dhandler)
-                                       (println "daemon stopped") )))
-          ]
+          N 1
+          daemons (into [] (for [i (range N)]
+                             (let [dhandler (atom nil)
+                                   dname (str "command-handler/" i)]
+                               (singleton-daemon dname
+                                                 (fn []
+                                                   (reset! dhandler (listen (:queue command-bus) handle-command))
+                                                   (println (str dname " started")))
+                                                 (fn []
+                                                   (.close @dhandler)
+                                                   (println (str dname " stopped")))))))]
       (.put aggregates :test {:_version 0})
-      (assoc this :handler handler
-                  :daemon daemon
+      (assoc this ;:handler handler
+                  :daemons daemons
                   :status status
                   :aggregates aggregates)))
   (stop [this]
     (info "Stopping CommandHandler")
-    (.close (:handler this))
-    (.stop (:daemon this))
+    ;(.close (:handler this))
+    (doseq [d (:daemons this)] (.stop d))
     (immutant.caching/stop (:aggregates this))
     (immutant.caching/stop (:status this))
-    (dissoc this :handler :cache :daemon) ))
+    (dissoc this :daemons) ))
 
 (defn build-commandhandler [config]
   (map->CommandHandler {:options config}))
-
 
 ;daemon functions
 ;(defonce listener (atom nil))

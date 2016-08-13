@@ -88,12 +88,11 @@
       :command-bus (build-commandbus config )
       :event-repository (using (build-eventrepo config) [:event-store :event-bus])
       :command-handler (using (build-commandhandler config) [:event-repository :command-bus] )
-      ;:agg-store ;use immutant.cache
+      ;:aggregate-repository ;use immutant.cache or clj/aggregate with jdbc
       :event-store (build-eventstore config)
       :event-bus (build-eventbus config)  ;TODO rename to bus!
       ;:resource-staging ;S3? For datasets or documents
       ;:record-bus ;AWS SQS? For coerced records, i.e. InsertRecord{:type ... :fields ...}
-      ;Object-topic ;send Objects?
       ;handle insert/serving of records given their types - ex: Solr or Elasticsearch
       :index-engine (using (build-index-engine config) [:event-bus])
       ;Subscribe each event-service to a dedicated topic in event-bus, insert as stream or batch if restart
