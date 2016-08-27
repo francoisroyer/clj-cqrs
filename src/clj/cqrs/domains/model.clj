@@ -51,16 +51,42 @@
 ;Should be backed by AggregateRepository in-memory, or jdbc
 ;(defrecord ModelAggregate [])
 
+;What actions/activities are available for an entity - depending on permissions of user?
+(def ModelResource {:id s/Str
+                    :name s/Str
+                    :links [{:rel (s/enum :self :activate :deactivate)
+                             :prompt s/Str
+                             :href s/Str}]
+                    })
+
+(def Models {:links [{:rel (s/enum :self :createNewModel)
+                      :prompt s/Str
+                      :href s/Str}]
+             :models [{}]})
+
+;How a form/modal should be built to perform an activity
+;Check permissions?
+;also add any field of owner entity to render client form, if exists
+(def CreateModelInfo {:href s/Str
+                      :fields [{:type (s/enum :textarea)
+                                :optional s/Bool
+                                :label s/Str
+                                :name s/Str}]
+                      :prompt s/Str
+                      })
+;TODO render CreateModelCommand in thml form? Use Reforms?
+
 
 (defn model-routes [cmd-bus]
   (context "/api" []
            :tags ["Models"]
-           (POST "/models/CreateModel" []
+           (POST "/models/createModel" []
                  :responses {202 {:schema (sch CommandAccepted) :description "Command accepted"}}
                  :body [cmd (describe (sch CreateModelCommand) "A new model spec")]
                  :summary "Creates a new model"
                  (accept-command cmd-bus (map->CreateModelCommand cmd) )
                  )
+           ;(GET "/models/createModel" [] :summary "Returns a pre-filled request to create a model" (ok CreateModelInfo))
            ;(GET "/models" []
            ;     :query-params [name :- s/Str]
            ;     :return [sch/Model]

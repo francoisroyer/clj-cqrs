@@ -8,6 +8,7 @@
 
   REFERENCES
   http://www.jayway.com/2013/04/02/event-sourcing-in-clojure/
+  https://lostechies.com/jimmybogard/2016/06/01/cqrs-and-rest-the-perfect-match/
   "
   (:require
     [taoensso.timbre :refer [log trace debug info warn error]]

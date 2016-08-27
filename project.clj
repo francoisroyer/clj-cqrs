@@ -28,6 +28,7 @@
                  [org.keycloak/keycloak-undertow-adapter "2.0.0.Final"]
 
                  ;API
+                 [io.sarnowski/swagger1st "0.21.0"]
                  [metosin/compojure-api "1.1.5" :exclusions [ring/ring-core]]
                  [ring/ring-core "1.5.0" :exclusion [org.clojure/tools.reader]]
                  [ring/ring-defaults "0.2.1"]
@@ -42,8 +43,9 @@
                  [org.webjars.bower/adminlte "2.3.3"]
 
                  ;Database
+                 [aggregate "1.1.3"]
                  ;[org.postgresql/postgresql "9.4.1207"]
-                 ;[com.h2database/h2 "1.4.192"]
+                 [com.h2database/h2 "1.4.192"]
 
                  ;Front-end
                  [org.clojure/clojurescript "1.8.51"]

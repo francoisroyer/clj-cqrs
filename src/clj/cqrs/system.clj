@@ -30,33 +30,6 @@
 ;(remove-ns 'clj-cqrs.api)
 
 
-;================================================================================
-; Test command and events
-;================================================================================
-
-(defrecord TestEvent [aggid version
-                      id created-at message]
-  IEvent
-  (apply-event [event state]
-    (assoc state :state :tested
-                 :last-tested-at (:created-at event)))
-  )
-
-;TODO should call relevant methods on state / agg! Should agg emit events?
-(s/defrecord TestCommand [message]
-             ICommand
-             (get-aggregate-id [this] :test)
-             (perform [command state aggid version]
-                      ;(when (:state state)
-                      ;  (throw (Exception. "Already in started")))
-                      (let [new-version (inc version)
-                            created-at (c/to-long (t/now))
-                            id 0]
-                        (println "TestCommand executed.")
-                        [(->TestEvent aggid new-version id created-at message)]) ))
-
-
-
 
 ;================================================================================
 ; CQRS SYSTEM
@@ -90,7 +63,7 @@
       :command-handler (using (build-commandhandler config) [:event-repository :command-bus] )
       ;:aggregate-repository ;use immutant.cache or clj/aggregate with jdbc
       :event-store (build-eventstore config)
-      :event-bus (build-eventbus config)  ;TODO rename to bus!
+      :event-bus (build-eventbus config)
       ;:resource-staging ;S3? For datasets or documents
       ;:record-bus ;AWS SQS? For coerced records, i.e. InsertRecord{:type ... :fields ...}
       ;handle insert/serving of records given their types - ex: Solr or Elasticsearch
@@ -162,6 +135,11 @@
 ;TODO command handler daemon + topic sharding - based on aggid hash?
 ;TODO transaction for writing state to agg cache and sending events to event store / event topic
 ;TODO execute command handler in a transaction? Then add a parameter sync=true - send back _links if async, or use websocket for both directions
+
+;TODO Reference app for IOT - asset catalog, classification, supervision, BPM, time series, analytics, alerts
+;TODO use PG for agg/entity storage - use Solr for graph/text/geo search
+;TODO paginate child entities in aggregate entities (links - next) - pagesize & page
+;TODO audit route for each entity/agg /:entity/:id/audit/logs /audit/errors
 
 ;TODO on connection of service, ask EventRepository to reply with all events since :last-update
 ;TODO provide implementations for EventStore: h2, pg, file...

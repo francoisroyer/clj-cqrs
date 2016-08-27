@@ -66,7 +66,7 @@
         ;topic-id (str "cmd-" (hash-to-bucket agg-id N))
         ;topic (get command-topics topic-id)
         ]
-    (publish (:queue cmd-bus) (assoc cmd :uuid uuid) :encoding :fressian)
+    (publish (get-in cmd-bus [:queues 0]) (assoc cmd :uuid uuid) :encoding :fressian)
     ;Return error 503 if queue unavailable
     (accepted {:id uuid
                :message "Command accepted"
@@ -82,14 +82,16 @@
 ;           (recur)))
 
 
-;TODO rename into topic - add N topics given :cmd-partitions option
+;TODO add N topics given :cmd-partitions option
 ;Embed in CommandHandler to handle sync=true mode?
 (defrecord CommandBus [options]
   component/Lifecycle
   (start [this]
     (info (str "Starting CommandBus component with options " options) )
-    (assoc this :queue (queue "cqrs-commands"))
-    )
+    (let [N 1 ;Number of topics for sharding command handling
+          queues (into [] (for [i (range N)] (queue (str "cqrs-commands-" i)))) ]
+      (assoc this :queues queues)
+      ))
   (stop [this]
     (info "Stopping CommandBus")
     this))
@@ -98,16 +100,6 @@
   (map->CommandBus {:options config}))
 
 
-(defrecord AggregateRepository []
-  component/Lifecycle
-  (start [this]
-    (let [cache (immutant.caching/cache "aggregates")]
-      {:cache cache}))
-  (stop [this]
-    (immutant.caching/stop (:cache this))
-    (dissoc this :cache)
-    )
-  )
 
 (defn apply-events [state events]
   (reduce #(apply-event %2 %1) state events))
@@ -118,13 +110,12 @@
 ;TODO encapsulate agg cache in aggregate-repository
 ;TODO add handler - connected clients -> should filter created commands on their client ids, chsk-send! command and its events to each
 
-(defrecord CommandHandler [options command-bus event-repository]  ;state-cache for Aggregate objects?
+(defrecord CommandHandler [options command-bus event-repository]  ;Add AggregateRepository for Aggregate objects
   component/Lifecycle
   (start [this]
     (info (str "Starting CommandHandler component with options " options) )
     (let [aggregates (immutant.caching/cache "aggregates")
           status (immutant.caching/cache "command-status" :ttl [1 :minute])
-          ;daemons (atom {}) ;sharded command handler daemons
           handle-command (fn [cmd]
                            (let [aggid (get-aggregate-id cmd)
                                  agg (get aggregates aggid)
@@ -136,7 +127,7 @@
                                  ]
                              ;Save new aggregate state
                              (try (.put aggregates aggid (assoc current-state :_version (inc version)))
-                                  (catch Exception e (println "WARNING - Aggregate cache unavailable")))
+                                  (catch Exception e (println "WARNING - Aggregate repository unavailable")))
                              ;publish events to command status cache (expiry of 1 minute)
                              (try (.put status (:uuid cmd) {:uuid (:uuid cmd)
                                                             :command (.getSimpleName (type cmd))
@@ -156,12 +147,12 @@
                                    dname (str "command-handler/" i)]
                                (singleton-daemon dname
                                                  (fn []
-                                                   (reset! dhandler (listen (:queue command-bus) handle-command))
-                                                   (println (str dname " started")))
+                                                   (reset! dhandler (listen (get-in command-bus [:queues i]) handle-command))
+                                                   (println (str "Daemon " dname " started")))
                                                  (fn []
                                                    (.close @dhandler)
-                                                   (println (str dname " stopped")))))))]
-      (.put aggregates :test {:_version 0})
+                                                   (println (str "Daemon " dname " stopped")))))))]
+      (.put aggregates :test {:_version 0}) ;FIXME remove this
       (assoc this ;:handler handler
                   :daemons daemons
                   :status status
@@ -177,19 +168,10 @@
 (defn build-commandhandler [config]
   (map->CommandHandler {:options config}))
 
-;daemon functions
-;(defonce listener (atom nil))
-;(defn start-listener []
-;  (swap! listener (fn [listener] (listen "my-queue" handle-msg) )))
-;(defn stop-listener []
-;    (swap! listener (fn [listener] (when listener (unlisten listener) ))))
-
 
 ;================================================================================
 ; COMMAND CHANNEL/WEBSOCKET
 ;================================================================================
-
-;TODO when client connected, open a subscription to new topic?
 
 (s/defschema CommandStatus {:uuid s/Str
                             :command s/Str
@@ -204,8 +186,9 @@
     )
   )
 
+;TODO when client connected, open a subscription to new topic?
 ;on handshake - have a command-status-handler started in CommandHandler,
-;should register channel with user id, get all command-status for this user
+;should register channel with user id, get all command-status for this user?
 
 (defn commands-routes [command-handler]
   (context "/api" []
@@ -217,10 +200,10 @@
                 :summary "Returns command status"
                 (get-command-status command-handler id)
                 )
-           ;(GET  "/commands" req (ring-ajax-get-or-ws-handshake req))
-           ;(POST "/commands" req (ring-ajax-post                req))
            ))
 
+;TODO expose entities via API
+(defn aggregate-routes [])
 
 ;define Command
 ;(defmacro defcommand)

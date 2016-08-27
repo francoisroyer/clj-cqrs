@@ -1,5 +1,6 @@
 (ns user
  (:require [cqrs.system :as cqrs]
+           [cqrs.domains.test :as ctest]
            [clojure.tools.namespace.repl :refer (refresh)]
            [clojure.repl :refer [pst]]
            [clojure.pprint :refer [pprint]])
@@ -59,4 +60,4 @@
   (start))
 
 (defn test-cmd []
-  (cqrs/run-command! (cqrs/map->TestCommand {:message "ok"}) ))
+  (cqrs/run-command! (ctest/map->TestCommand {:message "ok"}) ))
