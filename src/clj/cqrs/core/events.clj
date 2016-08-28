@@ -14,6 +14,11 @@
   (apply-event [event state])
   )
 
+(defn apply-events
+  "Reverse method args to be used in reduce by CommandHandler"
+  [state events]
+  (reduce #(apply-event %2 %1) state events))
+
 ;================================================================================
 ; EVENT STORE COMPONENTS
 ;================================================================================

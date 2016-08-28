@@ -29,6 +29,7 @@
     [cqrs.core.commands :refer :all]
     [cqrs.core.ws :as ws :refer [ws-ring-handler]]
     [cqrs.domains.model :refer [model-routes]]
+    [cqrs.domains.test :refer [test-routes]]
     )
   (:gen-class)
   )
@@ -224,6 +225,7 @@
           :data {:info {:title       "Sample API"
                         :description "Compojure Api example"}
                  :tags [{:name "api", :description "some apis"}]}}}
+        (test-routes cmd-bus)
         (model-routes cmd-bus)
         )
       )

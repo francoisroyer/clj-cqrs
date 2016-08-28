@@ -2,11 +2,13 @@
   (:require
     [taoensso.timbre :refer [log trace debug info warn error]]
     [com.stuartsierra.component :as component :refer [using]]
-    [immutant.messaging :refer [publish queue listen]]
+    [immutant.messaging :refer [publish queue listen stop]]
     [immutant.caching :as caching]
     [immutant.web.async :as async]
     [immutant.daemons :refer [singleton-daemon]]
     [schema.core :as s]
+    [clj-time.coerce :as c]
+    [clj-time.core :as t]
     [compojure.api.sweet :refer :all]
     [ring.util.http-response :refer :all]
     ;[taoensso.sente :as sente]
@@ -21,11 +23,13 @@
 
 (s/defrecord CommandAccepted [id :- s/Num
                               message :- s/Str
-                              _links :- {:status s/Str} ])
+                              links :- [{:rel s/Str
+                                         :href s/Str}] ])
 
 (defprotocol ICommand
   (get-aggregate-id [this]) ;used to dispatch on command topic and retrieve aggregate from repo
-  (perform [command state aggid version]))
+  (perform [command state aggid version]) ;check state, produce events
+  )
 
 (defn sch [r] (last (last (schema.utils/class-schema r))))
 
@@ -57,22 +61,22 @@
 ;                             "user/1" "user/2"
 ;                             ])
 
-;TODO Call get-agg-id to route to correct topic to ensure routing to single daemon handler - add hashing
-;TODO get client-id to send back command status via ws
+(defn make-timestamp [] (c/to-long (t/now)) )
+
+;TODO get client-id to send back command status via ws?
 ;TODO check user groups + authorized activities here?
 (defn accept-command [cmd-bus cmd]
   (let [uuid (str (java.util.UUID/randomUUID))
-        ;agg-id (get-agg-id cmd)
-        ;topic-id (str "cmd-" (hash-to-bucket agg-id N))
-        ;topic (get command-topics topic-id)
+        n-handlers (:n-handlers cmd-bus)
+        agg-id (name (get-aggregate-id cmd)) ;or apply str "/" if []?
+        topic-id (hash-to-bucket agg-id n-handlers)
         ]
-    (publish (get-in cmd-bus [:queues 0]) (assoc cmd :uuid uuid) :encoding :fressian)
-    ;Return error 503 if queue unavailable
+    (publish (get-in cmd-bus [:queues topic-id]) (assoc cmd :uuid uuid) :encoding :fressian)
+    ;TODO Return error 503 if queue unavailable
     (accepted {:id uuid
                :message "Command accepted"
-               :_links {:status (str "/command/" uuid)
-                        :status-channel (str "/commands") ;ws:// ?
-                        }
+               :links [{:rel "status" :href (str "/command/" uuid)}
+                       {:rel "status-channel" :href (str "/commands")}] ;ws:// ?
                })
     ))
 
@@ -82,27 +86,23 @@
 ;           (recur)))
 
 
-;TODO add N topics given :cmd-partitions option
 ;Embed in CommandHandler to handle sync=true mode?
 (defrecord CommandBus [options]
   component/Lifecycle
   (start [this]
     (info (str "Starting CommandBus component with options " options) )
-    (let [N 1 ;Number of topics for sharding command handling
-          queues (into [] (for [i (range N)] (queue (str "cqrs-commands-" i)))) ]
-      (assoc this :queues queues)
+    (let [N (get options :n-handlers 1) ;Number of topics for sharding command handling
+          queues (into [] (for [i (range N)] (queue (str "cqrs-commands/" i)))) ]
+      (assoc this :queues queues :n-handlers N)
       ))
   (stop [this]
     (info "Stopping CommandBus")
+    (doseq [q (:queues this)] (stop q))
     this))
 
 (defn build-commandbus [config]
   (map->CommandBus {:options config}))
 
-
-
-(defn apply-events [state events]
-  (reduce #(apply-event %2 %1) state events))
 
 
 
@@ -117,41 +117,43 @@
     (let [aggregates (immutant.caching/cache "aggregates")
           status (immutant.caching/cache "command-status" :ttl [1 :minute])
           handle-command (fn [cmd]
+                           ;should load Aggregate here - hide aggid afterwards!
                            (let [aggid (get-aggregate-id cmd)
                                  agg (get aggregates aggid)
                                  version (:_version agg)
                                  old-events (load-events event-repository aggid version)
                                  current-state (apply-events agg old-events)
-                                 _ (println current-state)
+                                 _ (debug current-state)
                                  events (perform cmd current-state aggid version) ;catch here exceptions - handle sync/async cases
                                  ]
-                             ;Save new aggregate state
+                             ;TODO Move save new aggregate state to AggregateRepository
                              (try (.put aggregates aggid (assoc current-state :_version (inc version)))
-                                  (catch Exception e (println "WARNING - Aggregate repository unavailable")))
-                             ;publish events to command status cache (expiry of 1 minute)
+                                  (catch Exception e (error "Aggregate repository unavailable")))
+                             ;Persist command status cache (expiry of 1 minute)
+                             ;If error -> add command error status
                              (try (.put status (:uuid cmd) {:uuid (:uuid cmd)
                                                             :command (.getSimpleName (type cmd))
-                                                            :status "PROCESSED"
+                                                            :status "PROCESSED" ;or FAILURE/REJECTED
                                                             :events events
                                                             })
-                                  (catch Exception e (println "WARNING - Command status cache unavailable")))
+                                  (catch Exception e (error "Command status cache unavailable")))
                              ;broadcast to clients
                              (broadcast-command (assoc cmd :events events))
                              ;TODO add aggid / version here if success - when events exist
                              (insert-events event-repository aggid events) ))
           ;handler (listen (:queue command-bus) handle-command)
           ;Start N daemons to shard command topic handling
-          N 1
+          N (get options :n-handlers 1)
           daemons (into [] (for [i (range N)]
                              (let [dhandler (atom nil)
                                    dname (str "command-handler/" i)]
                                (singleton-daemon dname
                                                  (fn []
                                                    (reset! dhandler (listen (get-in command-bus [:queues i]) handle-command))
-                                                   (println (str "Daemon " dname " started")))
+                                                   (info (str "Daemon " dname " started")))
                                                  (fn []
                                                    (.close @dhandler)
-                                                   (println (str "Daemon " dname " stopped")))))))]
+                                                   (info (str "Daemon " dname " stopped")))))))]
       (.put aggregates :test {:_version 0}) ;FIXME remove this
       (assoc this ;:handler handler
                   :daemons daemons

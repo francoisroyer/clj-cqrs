@@ -3,9 +3,8 @@
     [taoensso.timbre :refer [log trace debug info warn error]]
     [schema.core :as s]
     [compojure.api.sweet :refer :all]
+    [ring.util.http-response :refer :all]
     [ring.swagger.upload :as upload]
-    [clj-time.coerce :as c]
-    [clj-time.core :as t]
     [cqrs.core.commands :refer :all]
     )
   (:import
@@ -26,7 +25,7 @@
                               name
                               created-at]
   IEvent
-  (apply-event [event state]
+  (apply-event [event state]  ;TODO should be on Aggregate object, not state value
     (update-in state [:models] assoc (:id event) (dissoc event :aggid)))
 
   )
@@ -34,17 +33,17 @@
 
 (s/defrecord CreateModelCommand [owner :- s/Num
                                  name :- s/Str]
-             ICommand
-             (get-aggregate-id [this] [:users owner])
-             (perform [command state aggid version]
-                      (when (< 3 (count (:models state)))
-                        (throw (Exception. "Model quota reached.")))
-                      (println "CreateModelCommand executed.")
-                      (let [new-version (inc version)
-                            created-at (c/to-long (t/now))
-                            id 0]
-                        [(->ModelCreatedEvent aggid new-version
-                                              id owner name created-at)]) ))
+  ICommand
+  (get-aggregate-id [this] [:users owner])
+  (perform [command state aggid version]
+    (when (< 3 (count (:models state)))
+      (throw (Exception. "Model quota reached.")))
+    (println "CreateModelCommand executed.")
+    (let [new-version (inc version)
+          created-at (make-timestamp)
+          id 0]
+      [(->ModelCreatedEvent aggid new-version
+                            id owner name created-at)]) ))
 
 
 ;Aggregate - holds all business domain logic
@@ -74,7 +73,7 @@
                                 :name s/Str}]
                       :prompt s/Str
                       })
-;TODO render CreateModelCommand in thml form? Use Reforms?
+;TODO render CreateModelCommand in html form? Use Reforms?
 
 
 (defn model-routes [cmd-bus]
