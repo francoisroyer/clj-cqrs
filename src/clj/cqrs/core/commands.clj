@@ -119,10 +119,10 @@
           handle-command (fn [cmd]
                            ;should load Aggregate here - hide aggid afterwards!
                            (let [aggid (get-aggregate-id cmd)
-                                 agg (get aggregates aggid)
+                                 agg (get aggregates aggid) ;lazy load instead!
                                  version (:_version agg)
                                  old-events (load-events event-repository aggid version)
-                                 current-state (apply-events agg old-events)
+                                 current-state (apply-events agg old-events) ;Should be updated Agg object - may have changed on disk
                                  _ (debug current-state)
                                  events (perform cmd current-state aggid version) ;catch here exceptions - handle sync/async cases
                                  ]

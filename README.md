@@ -50,6 +50,10 @@ docker inspect --format='.NetworkSettings.IPAddress' keycloak
 Or: 
 docker run jboss/keycloak --name keycloak -p 8080:8080
 
+## References
+http://www.multunus.com/blog/2016/02/noobs-walkthrough-re-frame-app/
+https://lostechies.com/jimmybogard/2016/06/01/cqrs-and-rest-the-perfect-match/
+
 ## License
 
 Copyright © 2016 Francois Royer - Datasio - froyer@datasio.com

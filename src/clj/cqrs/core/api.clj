@@ -89,24 +89,24 @@
 (def page-info {:title ""
                 :logo ""})
 
-(def menu [{:label "Apps"
+(def menu [{:label "My Apps"
             :icon "fa fa-cubes"
             :href "#"}
-           {:label "Data hub"
+           {:label "Data Hub"
             :icon "fa fa-database"
             :submenu [
                       {:label "Sources" :href "#"}
                       {:label "Catalogs" :href "#"}
                       {:label "Feeds" :href "#"}
                       ]}
-           {:label "Data lab"
+           {:label "Data Lab"
             :icon "fa fa-flask"
             :submenu [
                       {:label "My projects" :href "#"}
                       {:label "Shared projects" :href "#"}
                       {:label "Notebooks" :href "#"}
                       ]}
-           {:label "Academy"
+           {:label "Data Academy"
             :icon "fa fa-graduation-cap"
             :submenu [
                       {:label "News" :href "#"}
@@ -144,6 +144,11 @@
                        (append (include-js "js/dev.js"))
                        )
              ;[:header.header] (content nil)
+             [:span.logo-lg] (content (html [:b {:style "font-family:Georgia;"} "pwc Data Lab"]))
+             [:div.user-panel :div.info :p] (content "François Royer")
+             [:div.user-panel :div.image :img] (set-attr :src "/assets/FR.jpg")
+             [:li.dropdown.user.user-menu :img] (set-attr :src "/assets/FR.jpg")
+             [:li.dropdown.user.user-menu :span.hidden-xs] (content "François Royer")
              [:ul.sidebar-menu] (content (html (for [item menu] [:li [:a {:href "#"}
                                                                       [:i {:class (:icon item)}]
                                                                       [:span (:label item) ]]] ) ))

@@ -8,6 +8,7 @@
   REFERENCES
   http://www.jayway.com/2013/04/02/event-sourcing-in-clojure/
   https://www.authorea.com/users/13936/articles/86622
+  https://lostechies.com/jimmybogard/2016/06/01/cqrs-and-rest-the-perfect-match/
   "
   (:require
     [taoensso.timbre :refer [log trace debug info warn error]]
@@ -20,6 +21,7 @@
     [hashids.core :as h]
     [cqrs.core.api :refer :all]
     [cqrs.core.commands :refer :all]
+    [cqrs.core.aggregates :refer :all]
     [cqrs.core.events :refer :all]
     [cqrs.engines.elasticsearch :refer [build-index-engine]]
     [cqrs.services.usage :refer [build-usage-service]]
@@ -54,14 +56,19 @@
 (defn build-webserver [config]
   (map->WebServer {:options config}))
 
+;TODO add domains subsystem that collects all domain aggregates and events + their write/read routes - depend on aggrepo!
+(defn make-domain-system [config]
+  (component/system-map :test (build-test-domain config))
+  )
 
 (defn make-app-system [config]
   (let [{:keys [host port]} config]
     (component/system-map
+      :domains (make-domain-system config)
       :command-bus (build-commandbus config )
       :event-repository (using (build-eventrepo config) [:event-store :event-bus])
-      :command-handler (using (build-commandhandler config) [:event-repository :command-bus] )
-      ;:aggregate-repository ;use immutant.cache or clj/aggregate with jdbc
+      :aggregate-repository (build-aggregaterepository config) ;use immutant.cache or clj/aggregate with jdbc
+      :command-handler (using (build-commandhandler config) [:event-repository :aggregate-repository :command-bus] )
       :event-store (build-eventstore config)
       :event-bus (build-eventbus config)
       ;:resource-staging ;S3? For datasets or documents
@@ -118,7 +125,7 @@
 ;TODO IAM with Keycloak or buddy
 ;TODO auth service - activity based UI and RBAC resource listing - http://clojutre.org/2015/slides/kekkonen_clojutre2015_print.pdf
 
-;TODO deploy on wildfly/openshift/jenkins
+;TODO deploy on wildfly/openshift/jenkins/GCE...
 ;TODO "saga" or EventStory in reaction to Events for integration of other services etc...
 ;TODO service for scheduled events -> Quartz - should subscribe to all events - apply-until (without side effects)
 ;TODO monitoring service / dashboard - Riemann - Docker see samsara?

@@ -31,7 +31,7 @@
     (if-let [node (:node this)]
       (do
         (info "Stopping ElasticsearchIndexStore.")
-        (.close node)
+        (.close node) ;TODO in dev mode, avoid close to accelerate reload?
         (dissoc this :conn :node))
       this))
   )

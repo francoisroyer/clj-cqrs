@@ -19,6 +19,13 @@
   [state events]
   (reduce #(apply-event %2 %1) state events))
 
+;(defmulti apply-event (fn [type tag]
+;                         (let [mlist (methods apply-event)]
+;                           (if-let [d (get mlist [type tag])]
+;                             [type tag]
+;                             [type :default]))))
+
+
 ;================================================================================
 ; EVENT STORE COMPONENTS
 ;================================================================================
