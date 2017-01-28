@@ -25,10 +25,9 @@
     [cqrs.core.events :refer :all]
     [cqrs.engines.elasticsearch :refer [build-index-engine]]
     [cqrs.services.usage :refer [build-usage-service]]
-    [environ.core       :refer (env)]
-    )
-  (:gen-class)
-  )
+    [environ.core       :refer (env)])
+  (:gen-class))
+
 ;(remove-ns 'clj-cqrs.api)
 
 
@@ -40,15 +39,15 @@
 (defrecord WebServer [options api]
   component/Lifecycle
   (start [this]
-    (info (str "Starting WebServer with options " options) )
+    (info (str "Starting WebServer with options " options))
     (let [server (web/run (:handler api)
                           :host "localhost"
-                          :port 8080 :path "/"
+                          :port 8080 :path "/")]
                           ;(merge
                           ;  {"host" (env :demo-web-host)
                           ;   "port" (env :demo-web-port 8080)})
-                          )]
-      (assoc this :server server) ))
+
+      (assoc this :server server)))
   (stop [this]
     (info "Stopping WebServer")
     this))
@@ -56,19 +55,23 @@
 (defn build-webserver [config]
   (map->WebServer {:options config}))
 
-;TODO add domains subsystem that collects all domain aggregates and events + their write/read routes - depend on aggrepo!
-(defn make-domain-system [config]
-  (component/system-map :test (build-test-domain config))
-  )
+;TODO add domains subsystem that collects all domain aggregates and events + their write/read routes
+;TODO each aggregate should depend on its corresponding aggrepo! -> these should be instantiated here.
+;:domain then should be injected as a dependency into command-handler?
+;(defn make-domain-system [config]
+;  (component/system-map
+;    :aggregate-repository (build-aggregaterepository config)
+;    :test (build-test-domain config))
+;  )
 
 (defn make-app-system [config]
   (let [{:keys [host port]} config]
     (component/system-map
-      :domains (make-domain-system config)
-      :command-bus (build-commandbus config )
+      ;:domain (make-domain-system config)
+      :command-bus (build-commandbus config)
       :event-repository (using (build-eventrepo config) [:event-store :event-bus])
       :aggregate-repository (build-aggregaterepository config) ;use immutant.cache or clj/aggregate with jdbc
-      :command-handler (using (build-commandhandler config) [:event-repository :aggregate-repository :command-bus] )
+      :command-handler (using (build-commandhandler config) [:event-repository :aggregate-repository :command-bus])
       :event-store (build-eventstore config)
       :event-bus (build-eventbus config)
       ;:resource-staging ;S3? For datasets or documents
@@ -76,14 +79,14 @@
       ;handle insert/serving of records given their types - ex: Solr or Elasticsearch
       :index-engine (using (build-index-engine config) [:event-bus])
       ;Subscribe each event-service to a dedicated topic in event-bus, insert as stream or batch if restart
-      :usage-service (using (build-usage-service config) [:event-bus :index-engine] )
-      :api (using (build-api (:api config)) [:command-bus :command-handler] )
-      :web-server (using (build-webserver config) [:api])
-      )))
+      :usage-service (using (build-usage-service config) [:event-bus :index-engine])
+      :api (using (build-api (:api config)) [:command-bus :command-handler])
+      :web-server (using (build-webserver config) [:api]))))
+
 
 (defn make-service-system
-  "Remote services system - ES, SOLR, Ingest/ETL (Kafka/Samsara), stream/batch, data staging/repositories"
-  [config] )
+  "Remote services system - ES, SOLR, Ingest/ETL (Kafka/Samsara/Onyx), stream/batch, data staging/repositories"
+  [config])
 
 ;:job-server ;stream/batch, onyx?
 ;:collectors ;riemann?
@@ -96,13 +99,13 @@
                                      :port 9999}
                               :elasticsearch {:local true
                                               :path "http://localhost:9200"}
-                              :api {}
-                              }))
+                              :api {}}))
+
 
 (defn start! []
   (try (alter-var-root #'system component/start)
-       (catch Exception e (println (component/ex-without-components e)) ))
-  )
+       (catch Exception e (println (component/ex-without-components e)))))
+
 
 (defn stop! []
   (alter-var-root #'system
@@ -112,8 +115,8 @@
 (defn run-command! [cmd]
   ;Call accept-command from API routes
   ;Store result of last command in *result*
-  (accept-command (-> system :command-bus) cmd )
-  )
+  (accept-command (-> system :command-bus) cmd))
+
 
 ;(start!)
 ;(stop!)

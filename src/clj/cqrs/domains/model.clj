@@ -5,12 +5,12 @@
     [compojure.api.sweet :refer :all]
     [ring.util.http-response :refer :all]
     [ring.swagger.upload :as upload]
-    [cqrs.core.commands :refer :all]
-    )
+    [cqrs.core.commands :refer :all])
+
   (:import
     [cqrs.core.commands CommandAccepted]
-    [cqrs.core.events IEvent])
-  )
+    [cqrs.core.events IEvent]))
+
 
 
 (s/defrecord Model [id :- s/Num
@@ -26,9 +26,9 @@
                               created-at]
   IEvent
   (apply-event [event state]  ;TODO should be on Aggregate object, not state value
-    (update-in state [:models] assoc (:id event) (dissoc event :aggid)))
+    (update-in state [:models] assoc (:id event) (dissoc event :aggid))))
 
-  )
+
 
 
 (s/defrecord CreateModelCommand [owner :- s/Num
@@ -43,7 +43,7 @@
           created-at (make-timestamp)
           id 0]
       [(->ModelCreatedEvent aggid new-version
-                            id owner name created-at)]) ))
+                            id owner name created-at)])))
 
 
 ;Aggregate - holds all business domain logic
@@ -55,8 +55,8 @@
                     :name s/Str
                     :links [{:rel (s/enum :self :activate :deactivate)
                              :prompt s/Str
-                             :href s/Str}]
-                    })
+                             :href s/Str}]})
+
 
 (def Models {:links [{:rel (s/enum :self :createNewModel)
                       :prompt s/Str
@@ -71,8 +71,8 @@
                                 :optional s/Bool
                                 :label s/Str
                                 :name s/Str}]
-                      :prompt s/Str
-                      })
+                      :prompt s/Str})
+
 ;TODO render CreateModelCommand in html form? Use Reforms?
 
 
@@ -83,8 +83,8 @@
                  :responses {202 {:schema (sch CommandAccepted) :description "Command accepted"}}
                  :body [cmd (describe (sch CreateModelCommand) "A new model spec")]
                  :summary "Creates a new model"
-                 (accept-command cmd-bus (map->CreateModelCommand cmd) )
-                 )
+                 (accept-command cmd-bus (map->CreateModelCommand cmd)))))
+
            ;(GET "/models/createModel" [] :summary "Returns a pre-filled request to create a model" (ok CreateModelInfo))
            ;(GET "/models" []
            ;     :query-params [name :- s/Str]
@@ -132,5 +132,3 @@
            ;     :summary "Status of command"
            ;     (handle-command db cmdqueue :model id cmd cmdid)  ;check events emitted by command - if error, should not mutate resource - store an CommandErrorEvent
            ;     )
-           ))
-

@@ -29,10 +29,10 @@
     [cqrs.core.commands :refer :all]
     [cqrs.core.ws :as ws :refer [ws-ring-handler]]
     [cqrs.domains.model :refer [model-routes]]
-    [cqrs.domains.test :refer [test-routes]]
-    )
-  (:gen-class)
-  )
+    [cqrs.domains.test :refer [test-routes]])
+
+  (:gen-class))
+
 
 (register-fressian-codec)
 
@@ -97,25 +97,25 @@
             :submenu [
                       {:label "Sources" :href "#"}
                       {:label "Catalogs" :href "#"}
-                      {:label "Feeds" :href "#"}
-                      ]}
+                      {:label "Feeds" :href "#"}]}
+
            {:label "Data Lab"
             :icon "fa fa-flask"
             :submenu [
                       {:label "My projects" :href "#"}
                       {:label "Shared projects" :href "#"}
-                      {:label "Notebooks" :href "#"}
-                      ]}
+                      {:label "Notebooks" :href "#"}]}
+
            {:label "Data Academy"
             :icon "fa fa-graduation-cap"
             :submenu [
                       {:label "News" :href "#"}
                       {:label "Documentation" :href "#"}
                       {:label "Tutorials" :href "#"}
-                      {:label "API" :href "#"}
-                      ]}
-           {:label "Dashboards" :icon "fa fa-dashboard" :href "#"} ;stats
-           ])
+                      {:label "API" :href "#"}]}
+
+           {:label "Dashboards" :icon "fa fa-dashboard" :href "#"}]) ;stats
+
 
 
 (deftemplate basetpl
@@ -141,8 +141,8 @@
                        ;  ;(include-js "js/app.js")
                        ;  ;(include-script "cqrs.core.init();")
                        ;  )
-                       (append (include-js "js/dev.js"))
-                       )
+                       (append (include-js "js/dev.js")))
+
              ;[:header.header] (content nil)
              [:span.logo-lg] (content (html [:b {:style "font-family:Georgia;"} "pwc Data Lab"]))
              [:div.user-panel :div.info :p] (content "François Royer")
@@ -151,31 +151,31 @@
              [:li.dropdown.user.user-menu :span.hidden-xs] (content "François Royer")
              [:ul.sidebar-menu] (content (html (for [item menu] [:li [:a {:href "#"}
                                                                       [:i {:class (:icon item)}]
-                                                                      [:span (:label item) ]]] ) ))
+                                                                      [:span (:label item)]]])))
              [:section.content] (content ;nil
                                       (html [:div.row
                                              [:div.col-md-6
-                                              [:div#app-container]
-                                              ]])
-                                             )
-             )
+                                              [:div#app-container]]])))
+
+
+
 
 (defsnippet login-box
              "META-INF/resources/webjars/adminlte/2.3.3/pages/examples/login.html"
              [:div.login-box]
              []
             [:div.checkbox] (content nil)
-            [:div.login-logo] (content (html [:a {:href "#"} [:b "CQRS"] " DEMO" ]))
-            [:form] (set-attr :action "/auth/login")
-            )
+            [:div.login-logo] (content (html [:a {:href "#"} [:b "CQRS"] " DEMO"]))
+            [:form] (set-attr :action "/auth/login"))
+
 
 (deftemplate logintpl
              "META-INF/resources/webjars/adminlte/2.3.3/index2.html"
              []
              [:body] (do->
                        (add-class "login-page")
-                       (content (login-box)))
-             )
+                       (content (login-box))))
+
 
 (defn basepage []
   (apply str (basetpl)))
@@ -193,15 +193,15 @@
     (debug "Login request: %s" params)
     ;{:status 200 :session (assoc session :uid user-id)}
     (-> (redirect redir)
-        (assoc :session (assoc session :uid user-id))
-        )))
+        (assoc :session (assoc session :uid user-id)))))
+
 
 (def auth-routes
   (routes
     ;(GET "/auth/whoami" req (profile req))
-    (POST "/auth/login" ring-req (login-handler ring-req))
-    )
-  )
+    (POST "/auth/login" ring-req (login-handler ring-req))))
+
+
 
 (def ui-routes
     (->
@@ -210,14 +210,14 @@
         (GET "/app/login" req (loginpage))
         (ANY "/*" []
              :responses {404 String}
-             (not-found "These aren't the droids you're looking for."))
-        )
+             (not-found "These aren't the droids you're looking for.")))
+
       (wrap-rename-webjars "/app" "adminlte") ;if request starts with app, route towards adminlte webjar
       ;(wrap-webjars "/assets")
       (wrap-cljsjs)
-      (wrap-resource "public")
-      )
-  )
+      (wrap-resource "public")))
+
+
 
 ;TODO any call fo /app/* should be routed to webjar /adminlte
 
@@ -231,10 +231,10 @@
                         :description "Compojure Api example"}
                  :tags [{:name "api", :description "some apis"}]}}}
         (test-routes cmd-bus)
-        (model-routes cmd-bus)
-        )
-      )
-  )
+        (model-routes cmd-bus))))
+
+
+
 
 
 ;TODO add middleware to add client-id in session - once logged, add entry user-id -> client-id
@@ -251,11 +251,11 @@
                 ;    ring.middleware.keyword-params/wrap-keyword-params
                 ;    ring.middleware.params/wrap-params)
                 (commands-routes command-handler)
-                ui-routes
-                )
-          ]
+                ui-routes)]
+
+
       (ws/start-router!)
-      (assoc this :handler (:handler app) )))
+      (assoc this :handler (:handler app))))
   (stop [this]
     (info "Stopping API")
     (ws/stop-router!)
@@ -410,4 +410,3 @@
 ;In project:
 ;CreateDocument -> add Extractor, or refer to parentProject Extractor -> extract new documents from found Resources/Datasources
 ;DocumentCreated -> run sync/crawler, extract new documents
-

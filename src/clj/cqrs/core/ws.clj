@@ -32,8 +32,8 @@
   (def ring-ajax-get-or-ws-handshake ajax-get-or-ws-handshake-fn)
   (def ch-chsk                       ch-recv) ; ChannelSocket's receive channel
   (def chsk-send!                    send-fn) ; ChannelSocket's send API fn
-  (def connected-uids                connected-uids) ; Watchable, read-only atom
-  )
+  (def connected-uids                connected-uids)) ; Watchable, read-only atom
+
 
 ;; We can watch this atom for changes if we like
 (add-watch connected-uids :connected-uids
@@ -43,8 +43,8 @@
 
 (defroutes ring-routes
            (GET  "/chsk"  ring-req (ring-ajax-get-or-ws-handshake ring-req))
-           (POST "/chsk"  ring-req (ring-ajax-post                ring-req))
-           )
+           (POST "/chsk"  ring-req (ring-ajax-post                ring-req)))
+
 
 (def ws-ring-handler
   "**NB**: Sente requires the Ring `wrap-params` + `wrap-keyword-params`
@@ -92,25 +92,25 @@
 
 (defn broadcast-command [command]
  (let [uids (:any @connected-uids)]
-            (debugf "Broadcasting command: %s uids" (count uids))
-            (doseq [uid uids]
-              (chsk-send! uid
-                          [:cqrs/command command ]))))
+      (debugf "Broadcasting command: %s uids" (count uids))
+      (doseq [uid uids]
+        (chsk-send! uid
+                    [:cqrs/command command]))))
 
 
 ;;;; Sente event handlers
 
 (defmulti -event-msg-handler
           "Multimethod to handle Sente `event-msg`s"
-          :id ; Dispatch on event-id
-          )
+          :id) ; Dispatch on event-id
+
 
 (defn event-msg-handler
   "Wraps `-event-msg-handler` with logging, error catching, etc."
   [{:as ev-msg :keys [id ?data event]}]
-  (-event-msg-handler ev-msg) ; Handle event-msgs on a single thread
+  (-event-msg-handler ev-msg)) ; Handle event-msgs on a single thread
   ;; (future (-event-msg-handler ev-msg)) ; Handle event-msgs on a thread pool
-  )
+
 
 (defmethod -event-msg-handler
   :default ; Default/fallback case (no other matching handler)
@@ -140,5 +140,3 @@
   (reset! router_
           (sente/start-server-chsk-router!
             ch-chsk event-msg-handler)))
-
-

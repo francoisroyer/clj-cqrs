@@ -14,6 +14,8 @@
   (:import org.elasticsearch.node.NodeBuilder)
   )
 
+
+;TODO check if url localhost:9200 returns 200 - otherwise start local node if :start-local-node is true
 (defrecord ElasticsearchIndexEngine [options event-bus]
   component/Lifecycle
   (start [this]

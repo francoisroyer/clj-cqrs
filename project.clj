@@ -43,6 +43,7 @@
                  [org.webjars.bower/adminlte "2.3.3"]
 
                  ;Database
+                 [korma "0.4.0"]
                  [aggregate "1.1.3"]
                  ;[org.postgresql/postgresql "9.4.1207"]
                  [com.h2database/h2 "1.4.192"]
@@ -61,9 +62,9 @@
                  [cljsjs/pdfjs "1.5.188-0"]
                  [cljsjs/vis "4.16.1-0"]
                  [cljsjs/leaflet "0.7.7-4"]
-                 [cljsjs/react-grid-layout "0.12.7-0"]
+                 [cljsjs/react-grid-layout "0.12.7-0"]]
                  ;[cljsjs/codemirror "5.11.0-2"]
-                 ]
+
   :source-paths ["src/clj" "src/cljs"]
   ;:uberjar-name "demo-standalone.jar"
   :min-lein-version "2.5.1"
@@ -73,14 +74,14 @@
                        :aot [com.stuartsierra.dependency
                              com.stuartsierra.component
                              cqrs.system
-                             cqrs.api]
-                       }
+                             cqrs.api]}
+
              :dev {:source-paths ["dev" "src/clj"]
                    :plugins [[lein-immutant "2.1.0"]
                              [lein-environ "1.0.1"]
                              [lein-cljsbuild "1.1.3"]
-                             [lein-figwheel "0.5.4-7"]
-                             ]
+                             [lein-figwheel "0.5.4-7"]]
+
                    :dependencies [[ns-tracker "0.3.0"]
                                   ;[org.apache.solr/solr-core "6.1.0" :exclusions [[com.fasterxml.jackson.core/jackson-core]
                                   ;                                                [com.fasterxml.jackson.dataformat/jackson-dataformat-smile]]]
@@ -90,11 +91,11 @@
                                   [com.h2database/h2 "1.4.192"]
                                   [org.elasticsearch/elasticsearch "1.7.3"]
                                   [clojurewerkz/elastisch "2.2.2"]
-                                  [org.onyxplatform/onyx "0.9.9"]
-                                  ]
+                                  [org.onyxplatform/onyx "0.9.9"]]
+
                    ;:java-source-paths ["src/java"]
-                   :repl-options {:port 54806}
-                   }}
+                   :repl-options {:port 54806}}}
+
   :cljsbuild {:builds [ {:id "dev" ;lein figwheel dev
                          :source-paths ["src/cljs"]
                          :figwheel {:on-jsload cqrs.core/reload} ;true
@@ -112,8 +113,8 @@
                                     :main cqrs.core
                                     ;;:externs       ["react/externs/react.js"]
                                     :optimizations :advanced
-                                    :pretty-print  true}}
-                       ]}
+                                    :pretty-print  true}}]}
+
   :aliases {"node1"
             ["immutant" "run" "--clustered"
              "-Djboss.node.name=node1"
@@ -122,5 +123,4 @@
             ["immutant" "run" "--clustered"
              "-Djboss.node.name=node2"
              "-Djboss.server.data.dir=/tmp/two"
-             "-Djboss.socket.binding.port-offset=100"]}
-  )
+             "-Djboss.socket.binding.port-offset=100"]})

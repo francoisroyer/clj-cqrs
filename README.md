@@ -50,9 +50,15 @@ docker inspect --format='.NetworkSettings.IPAddress' keycloak
 Or: 
 docker run jboss/keycloak --name keycloak -p 8080:8080
 
+#https://wesmorgan.svbtle.com/deploying-clojure-apps-with-docker-and-immutant-2
+
 ## References
 http://www.multunus.com/blog/2016/02/noobs-walkthrough-re-frame-app/
 https://lostechies.com/jimmybogard/2016/06/01/cqrs-and-rest-the-perfect-match/
+
+ookami86 Event Sourcing in practice
+Trigger side effects only when applying Command to object
+Then Events applied to change state (this step only called on replay - not the other one)
 
 ## License
 

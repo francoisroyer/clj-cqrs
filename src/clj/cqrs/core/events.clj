@@ -6,24 +6,19 @@
     [immutant.messaging :refer :all]
     [immutant.messaging :refer [publish]]
     [schema.core :as s]
-    [abracad.avro :as avro]
-    )
-  )
+    [abracad.avro :as avro]))
+
+
 
 (defprotocol IEvent
-  (apply-event [event state])
-  )
+  (apply-event [event state]))
+
 
 (defn apply-events
   "Reverse method args to be used in reduce by CommandHandler"
   [state events]
   (reduce #(apply-event %2 %1) state events))
 
-;(defmulti apply-event (fn [type tag]
-;                         (let [mlist (methods apply-event)]
-;                           (if-let [d (get mlist [type tag])]
-;                             [type tag]
-;                             [type :default]))))
 
 
 ;================================================================================
@@ -43,10 +38,10 @@
   (let [current-label (atom "now")
         event-file (clojure.java.io/file "data" (str @current-label ".events"))]
     (io! (with-open [w (clojure.java.io/writer event-file :append true)]
-           (clojure.pprint/pprint event w)))
+           (clojure.pprint/pprint event w)))))
     ;(when (>= (event :seq) events-per-snapshot)
     ;        (snapshot @world))
-    ))
+
 
 (def schema
   (avro/parse-schema
@@ -95,8 +90,8 @@ PRIMARY KEY (session_id)\n
     (assoc this :store (atom {})))
   (stop [this]
     (info "Stopping EventStore")
-    (dissoc this :store))
-  )
+    (dissoc this :store)))
+
 
 (defn build-eventstore
   "Build EventStore in dev or prod mode"
@@ -116,7 +111,7 @@ PRIMARY KEY (session_id)\n
 (defrecord EventRepository [options event-store event-bus state-cache]
   component/Lifecycle
   (start [this]
-    (info (str "Starting EventRepository component with options " options) )
+    (info (str "Starting EventRepository component with options " options))
     (assoc this :event-store event-store
                 :event-bus event-bus))
   (stop [this]
@@ -131,14 +126,14 @@ PRIMARY KEY (session_id)\n
          update-in [aggid] concat events)
   ;Publish events
   (doseq [event events]
-    (publish (-> event-repository :event-bus :topic) event :encoding :fressian))
-  )
+    (publish (-> event-repository :event-bus :topic) event :encoding :fressian)))
+
 
 (defn load-events
   "Load events from event repository for given aggregate, since given version"
   [event-repo aggid version]
-  (filter #(>= version (:version %)) (get @(get-in event-repo [:event-store :store]) aggid))
-  )
+  (filter #(>= version (:version %)) (get @(get-in event-repo [:event-store :store]) aggid)))
+
 
 (defn build-eventrepo [config]
   (map->EventRepository {:options config}))
@@ -153,9 +148,9 @@ PRIMARY KEY (session_id)\n
 (defrecord EventBus [options]
   component/Lifecycle
   (start [this]
-    (info (str "Starting EventBus component with options " options) )
-    (assoc this :topic (topic "events"))
-    )
+    (info (str "Starting EventBus component with options " options))
+    (assoc this :topic (topic "events")))
+
   (stop [this]
     (info "Stopping EventBus")
     (stop (:topic this))
@@ -164,3 +159,31 @@ PRIMARY KEY (session_id)\n
 (defn build-eventbus [config]
   (map->EventBus {:options config}))
 
+
+;EXAMPLE USING JSONB / PG
+;CREATE TABLE integrations (id UUID, data JSONB);
+;INSERT INTO integrations VALUES (
+;                                  uuid_generate_v4(),
+;                                                  '{
+;                                                    "service": "salesforce",
+;"id": "AC347D212341XR",
+;"email": "craig@citusdata.com",
+;"occurred_at": "8/14/16 11:00:00",
+;"added": {
+;          "lead_score": 50
+;},
+;"updated": {
+;            "updated_at": "8/14/16 11:00:00"
+;}
+;}');
+;INSERT INTO integrations (
+;                           uuid_generate_v4(),
+;                                           '{
+;                                             "service": "zendesk",
+;"email": "craig@citusdata.com",
+;"occurred_at": "8/14/16 10:50:00",
+;"ticket_opened": {
+;                  "ticket_id": 1234,
+;"ticket_priority": "high"
+;}
+;}');

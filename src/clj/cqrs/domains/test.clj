@@ -7,6 +7,7 @@
     [ring.util.http-response :refer :all]
     [cqrs.core.commands :refer :all]
     [cqrs.core.events :refer :all]
+    ;[korma.db :refer :all]
     )
   (:import
     [cqrs.core.commands CommandAccepted]
@@ -17,6 +18,7 @@
 ; Aggregate
 ;================================================================================
 
+;Define here how the aggregate is loaded from cache, in full from the database, or lazily
 (def er
   "The complete entity-relationship model."
   (agg/make-er-config
@@ -67,10 +69,7 @@
     )
   )
 
-;(defmethod apply-event [:TestEvent :h2] [event agg-with-repo])
-;(defmethod apply-event [:TestEvent :atom] [event agg-with-repo])
 
-;TODO defmethod instead -> default provided (remove keys aggid and version)
 
 (def TestCommandView {:fields [{:name "message"
                                 :label "Your message"
@@ -97,6 +96,8 @@
 ; Routes
 ;================================================================================
 
+;TODO Query routes should be passe agg-repo??
+
 (defn test-routes [cmd-bus]
   (context "/api" []
            :tags ["Tests"]
@@ -122,9 +123,14 @@
                  )
            ))
 
+(defn test-query-routes [agg-repo])
+
 (defn build-test-domain
   "Builds entity tables according to schema and exposes domain routes to main system"
-  [config])
+  [config]
+  {:query-routes test-query-routes
+   :command-routes test-routes}
+  )
 
 ;BUXFER
 ;/api/login?userid=john@doe.com&password=dohdoh
