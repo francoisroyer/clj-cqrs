@@ -21,8 +21,8 @@
                  [environ "1.0.0"]
 
                  ;[amazonica "0.3.73"]
-                 [org.immutant/immutant "2.1.5"]
-                 [org.immutant/wildfly "2.1.5"]
+                 [org.immutant/immutant "2.1.6"]
+                 [org.immutant/wildfly "2.1.6"]
                  ;[io.undertow/undertow-core "1.3.15.Final"] ;TODO fix dep on Jackson
                  ;[org.keycloak/keycloak-undertow-adapter "1.9.7.Final"]
                  [org.keycloak/keycloak-undertow-adapter "2.0.0.Final"]
@@ -30,7 +30,7 @@
                  ;API
                  [io.sarnowski/swagger1st "0.21.0"]
                  [metosin/compojure-api "1.1.5" :exclusions [ring/ring-core]]
-                 [ring/ring-core "1.5.0" :exclusion [org.clojure/tools.reader]]
+                 [ring/ring-core "1.5.1" :exclusion [org.clojure/tools.reader]]
                  [ring/ring-defaults "0.2.1"]
                  [org.clojure/tools.reader "0.10.0"]
                  [org.webjars/webjars-locator "0.27"]
@@ -91,7 +91,7 @@
                                   [com.h2database/h2 "1.4.192"]
                                   [org.elasticsearch/elasticsearch "1.7.3"]
                                   [clojurewerkz/elastisch "2.2.2"]
-                                  [org.onyxplatform/onyx "0.9.9"]]
+                                  [org.onyxplatform/onyx "0.9.15"]]
 
                    ;:java-source-paths ["src/java"]
                    :repl-options {:port 54806}}}

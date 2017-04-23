@@ -6,6 +6,9 @@ A Clojure library implementing CQRS and event-sourcing using Immutant components
 
 TODO show how to to use as a template
 
+TODO add DSL for contract / domain logic?
+
+
 ## Deploy in a Wildfly cluster in Openshift
 
 rhc create-app $APPNAME wildfly --from-code $GIT_LOCATION
