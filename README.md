@@ -65,7 +65,7 @@ Then Events applied to change state (this step only called on replay - not the o
 
 ## License
 
-Copyright © 2016 Francois Royer - Datasio - froyer@datasio.com
+Copyright © 2016 François Royer
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
